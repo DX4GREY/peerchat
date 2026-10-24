@@ -4,6 +4,7 @@
 #include <QDateTime>
 #include <QJsonObject>
 #include <QString>
+
 #include <optional>
 
 namespace peerchat::messaging {

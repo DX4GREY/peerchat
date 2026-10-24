@@ -7,25 +7,41 @@ namespace peerchat::messaging {
 
 QString messageTypeToString(MessageType type) {
     switch (type) {
-        case MessageType::Text: return QStringLiteral("text");
-        case MessageType::DeliveryAck: return QStringLiteral("delivery_ack");
-        case MessageType::FileOffer: return QStringLiteral("file_offer");
-        case MessageType::FileChunk: return QStringLiteral("file_chunk");
-        case MessageType::FileControl: return QStringLiteral("file_control");
-        case MessageType::Typing: return QStringLiteral("typing");
-        case MessageType::Presence: return QStringLiteral("presence");
-        case MessageType::Unknown: default: return QStringLiteral("unknown");
+        case MessageType::Text:
+            return QStringLiteral("text");
+        case MessageType::DeliveryAck:
+            return QStringLiteral("delivery_ack");
+        case MessageType::FileOffer:
+            return QStringLiteral("file_offer");
+        case MessageType::FileChunk:
+            return QStringLiteral("file_chunk");
+        case MessageType::FileControl:
+            return QStringLiteral("file_control");
+        case MessageType::Typing:
+            return QStringLiteral("typing");
+        case MessageType::Presence:
+            return QStringLiteral("presence");
+        case MessageType::Unknown:
+        default:
+            return QStringLiteral("unknown");
     }
 }
 
 MessageType stringToMessageType(const QString& str) {
-    if (str == QLatin1String("text")) return MessageType::Text;
-    if (str == QLatin1String("delivery_ack")) return MessageType::DeliveryAck;
-    if (str == QLatin1String("file_offer")) return MessageType::FileOffer;
-    if (str == QLatin1String("file_chunk")) return MessageType::FileChunk;
-    if (str == QLatin1String("file_control")) return MessageType::FileControl;
-    if (str == QLatin1String("typing")) return MessageType::Typing;
-    if (str == QLatin1String("presence")) return MessageType::Presence;
+    if (str == QLatin1String("text"))
+        return MessageType::Text;
+    if (str == QLatin1String("delivery_ack"))
+        return MessageType::DeliveryAck;
+    if (str == QLatin1String("file_offer"))
+        return MessageType::FileOffer;
+    if (str == QLatin1String("file_chunk"))
+        return MessageType::FileChunk;
+    if (str == QLatin1String("file_control"))
+        return MessageType::FileControl;
+    if (str == QLatin1String("typing"))
+        return MessageType::Typing;
+    if (str == QLatin1String("presence"))
+        return MessageType::Presence;
     return MessageType::Unknown;
 }
 
@@ -50,39 +66,51 @@ QByteArray ProtocolMessage::canonicalPayloadBytes() const {
 }
 
 bool ProtocolMessage::isValid() const {
-    if (version != 1) return false;
-    if (id.isEmpty() || id.length() > 64) return false;
-    if (type == MessageType::Unknown) return false;
-    if (!senderId.startsWith("peer:ed25519:") || senderId.length() != 77) return false;
-    if (!recipientId.startsWith("peer:ed25519:") || recipientId.length() != 77) return false;
-    if (timestamp <= 0) return false;
+    if (version != 1)
+        return false;
+    if (id.isEmpty() || id.length() > 64)
+        return false;
+    if (type == MessageType::Unknown)
+        return false;
+    if (!senderId.startsWith("peer:ed25519:") || senderId.length() != 77)
+        return false;
+    if (!recipientId.startsWith("peer:ed25519:") || recipientId.length() != 77)
+        return false;
+    if (timestamp <= 0)
+        return false;
 
     // Type-specific validation
     switch (type) {
         case MessageType::Text: {
             QString text = payload.value("text").toString();
-            if (text.isEmpty() || text.toUtf8().size() > 65536) return false;
+            if (text.isEmpty() || text.toUtf8().size() > 65536)
+                return false;
             break;
         }
         case MessageType::DeliveryAck: {
             QString ackId = payload.value("ack_message_id").toString();
-            if (ackId.isEmpty()) return false;
+            if (ackId.isEmpty())
+                return false;
             break;
         }
         case MessageType::FileOffer: {
             QString transferId = payload.value("transfer_id").toString();
             QString filename = payload.value("filename").toString();
             qint64 totalSize = payload.value("total_size").toInteger();
-            if (transferId.isEmpty() || filename.isEmpty() || totalSize < 0) return false;
+            if (transferId.isEmpty() || filename.isEmpty() || totalSize < 0)
+                return false;
             break;
         }
         case MessageType::FileChunk: {
             QString transferId = payload.value("transfer_id").toString();
-            if (transferId.isEmpty()) return false;
-            if (!payload.contains("chunk_index")) return false;
+            if (transferId.isEmpty())
+                return false;
+            if (!payload.contains("chunk_index"))
+                return false;
             QString chunkData = payload.value("chunk_data").toString();
             // Maximum 64KB binary chunk is ~88KB Base64
-            if (chunkData.size() > 100000) return false;
+            if (chunkData.size() > 100000)
+                return false;
             break;
         }
         default:
@@ -100,7 +128,10 @@ QByteArray ProtocolMessage::toJson(bool compact) const {
     obj["sender_id"] = senderId;
     obj["recipient_id"] = recipientId;
     obj["timestamp"] = timestamp;
-    obj["conversation_id"] = conversationId.isEmpty() ? (senderId < recipientId ? senderId + "_" + recipientId : recipientId + "_" + senderId) : conversationId;
+    obj["conversation_id"] =
+        conversationId.isEmpty()
+            ? (senderId < recipientId ? senderId + "_" + recipientId : recipientId + "_" + senderId)
+            : conversationId;
     obj["payload"] = payload;
     if (!signature.isEmpty()) {
         obj["signature"] = QString::fromUtf8(signature.toHex());
@@ -132,7 +163,7 @@ std::optional<ProtocolMessage> ProtocolMessage::fromJson(const QByteArray& data)
     msg.timestamp = obj.value("timestamp").toInteger(0);
     msg.conversationId = obj.value("conversation_id").toString();
     msg.payload = obj.value("payload").toObject();
-    
+
     if (obj.contains("signature")) {
         msg.signature = QByteArray::fromHex(obj.value("signature").toString().toUtf8());
     }

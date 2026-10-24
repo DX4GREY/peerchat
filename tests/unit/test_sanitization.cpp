@@ -1,5 +1,5 @@
-#include <gtest/gtest.h>
 #include "../../core/transfers/IFileTransfer.hpp"
+#include <gtest/gtest.h>
 
 using namespace peerchat::transfers;
 

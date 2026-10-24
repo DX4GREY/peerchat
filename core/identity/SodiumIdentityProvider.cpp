@@ -1,9 +1,11 @@
 #include "SodiumIdentityProvider.hpp"
+
+#include <QDir>
 #include <QFile>
 #include <QFileInfo>
-#include <QDir>
-#include <QJsonObject>
 #include <QJsonDocument>
+#include <QJsonObject>
+
 #include <sodium.h>
 
 namespace peerchat::identity {
@@ -27,8 +29,7 @@ QString IIdentityProvider::formatPeerId(const QByteArray& publicKey) {
     return QStringLiteral("peer:ed25519:") + QString::fromUtf8(publicKey.toHex());
 }
 
-SodiumIdentityProvider::SodiumIdentityProvider(QObject* parent)
-    : IIdentityProvider(parent) {
+SodiumIdentityProvider::SodiumIdentityProvider(QObject* parent) : IIdentityProvider(parent) {
     crypto::CryptoUtils::initialize();
 }
 
@@ -39,7 +40,8 @@ SodiumIdentityProvider::~SodiumIdentityProvider() {
     }
 }
 
-bool SodiumIdentityProvider::loadOrCreate(const QString& keyStoragePath, const QString& displayName) {
+bool SodiumIdentityProvider::loadOrCreate(const QString& keyStoragePath,
+                                          const QString& displayName) {
     m_keyPath = keyStoragePath;
     QFileInfo fi(m_keyPath);
     QDir dir = fi.dir();
@@ -82,7 +84,8 @@ bool SodiumIdentityProvider::loadOrCreate(const QString& keyStoragePath, const Q
     if (!displayName.trimmed().isEmpty()) {
         m_displayName = displayName.trimmed();
     } else {
-        m_displayName = QStringLiteral("Peer_") + QString::fromUtf8(m_keyPair.publicKey.left(4).toHex());
+        m_displayName =
+            QStringLiteral("Peer_") + QString::fromUtf8(m_keyPair.publicKey.left(4).toHex());
     }
 
     QJsonObject obj;
@@ -146,7 +149,8 @@ QByteArray SodiumIdentityProvider::sign(const QByteArray& data) const {
     return crypto::CryptoUtils::sign(data, m_keyPair.secretKey);
 }
 
-bool SodiumIdentityProvider::verifyPeerSignature(const QString& peerId, const QByteArray& data, const QByteArray& signature) const {
+bool SodiumIdentityProvider::verifyPeerSignature(const QString& peerId, const QByteArray& data,
+                                                 const QByteArray& signature) const {
     QByteArray pubKey = extractPublicKey(peerId);
     if (pubKey.isEmpty()) {
         return false;

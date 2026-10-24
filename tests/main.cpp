@@ -1,5 +1,6 @@
-#include <gtest/gtest.h>
 #include <QCoreApplication>
+
+#include <gtest/gtest.h>
 
 int main(int argc, char* argv[]) {
     QCoreApplication app(argc, argv);

@@ -1,4 +1,5 @@
 #include "DiagnosticsService.hpp"
+
 #include <QDateTime>
 
 namespace peerchat::diagnostics {

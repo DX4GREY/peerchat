@@ -5,7 +5,8 @@ namespace peerchat::client {
 MessageModel::MessageModel(QObject* parent) : QAbstractListModel(parent) {}
 
 int MessageModel::rowCount(const QModelIndex& parent) const {
-    if (parent.isValid()) return 0;
+    if (parent.isValid())
+        return 0;
     return static_cast<int>(m_messages.size());
 }
 
@@ -16,15 +17,24 @@ QVariant MessageModel::data(const QModelIndex& index, int role) const {
 
     const MessageItem& item = m_messages.at(index.row());
     switch (role) {
-        case IdRole: return item.id;
-        case SenderIdRole: return item.senderId;
-        case ContentRole: return item.content;
-        case MediaPathRole: return item.mediaPath;
-        case StatusStrRole: return item.statusStr;
-        case IsOutgoingRole: return item.isOutgoing;
-        case TimestampRole: return item.timestamp;
-        case TimeFormattedRole: return item.timeFormatted;
-        default: return QVariant();
+        case IdRole:
+            return item.id;
+        case SenderIdRole:
+            return item.senderId;
+        case ContentRole:
+            return item.content;
+        case MediaPathRole:
+            return item.mediaPath;
+        case StatusStrRole:
+            return item.statusStr;
+        case IsOutgoingRole:
+            return item.isOutgoing;
+        case TimestampRole:
+            return item.timestamp;
+        case TimeFormattedRole:
+            return item.timeFormatted;
+        default:
+            return QVariant();
     }
 }
 
@@ -48,7 +58,8 @@ void MessageModel::setMessages(const QList<MessageItem>& items) {
 }
 
 void MessageModel::appendMessage(const MessageItem& item) {
-    beginInsertRows(QModelIndex(), static_cast<int>(m_messages.size()), static_cast<int>(m_messages.size()));
+    beginInsertRows(QModelIndex(), static_cast<int>(m_messages.size()),
+                    static_cast<int>(m_messages.size()));
     m_messages.append(item);
     endInsertRows();
 }

@@ -1,29 +1,39 @@
 #include "DirectTcpTransport.hpp"
-#include "../crypto/CryptoUtils.hpp"
 
 #include <QDateTime>
 #include <QJsonDocument>
 #include <QJsonObject>
 
+#include "../crypto/CryptoUtils.hpp"
+
 namespace peerchat::networking {
 
 QString routeTypeToString(RouteType route) {
     switch (route) {
-        case RouteType::Direct: return QStringLiteral("Direct");
-        case RouteType::Relay: return QStringLiteral("Relay");
-        case RouteType::Connecting: return QStringLiteral("Connecting");
-        case RouteType::Offline: default: return QStringLiteral("Offline");
+        case RouteType::Direct:
+            return QStringLiteral("Direct");
+        case RouteType::Relay:
+            return QStringLiteral("Relay");
+        case RouteType::Connecting:
+            return QStringLiteral("Connecting");
+        case RouteType::Offline:
+        default:
+            return QStringLiteral("Offline");
     }
 }
 
 RouteType stringToRouteType(const QString& str) {
-    if (str == QLatin1String("Direct")) return RouteType::Direct;
-    if (str == QLatin1String("Relay")) return RouteType::Relay;
-    if (str == QLatin1String("Connecting")) return RouteType::Connecting;
+    if (str == QLatin1String("Direct"))
+        return RouteType::Direct;
+    if (str == QLatin1String("Relay"))
+        return RouteType::Relay;
+    if (str == QLatin1String("Connecting"))
+        return RouteType::Connecting;
     return RouteType::Offline;
 }
 
-DirectTcpTransport::DirectTcpTransport(identity::IIdentityProvider* identityProvider, QObject* parent)
+DirectTcpTransport::DirectTcpTransport(identity::IIdentityProvider* identityProvider,
+                                       QObject* parent)
     : IPeerTransport(parent), m_identityProvider(identityProvider) {
     m_server = new QTcpServer(this);
     connect(m_server, &QTcpServer::newConnection, this, &DirectTcpTransport::onNewConnection);
@@ -78,9 +88,7 @@ void DirectTcpTransport::connectToPeer(const QString& peerId, const QString& hos
     m_pendingSockets.insert(framed);
     m_expectedPendingPeerId[framed] = peerId;
 
-    connect(rawSocket, &QTcpSocket::connected, this, [this, framed]() {
-        sendHandshake(framed);
-    });
+    connect(rawSocket, &QTcpSocket::connected, this, [this, framed]() { sendHandshake(framed); });
 
     connect(framed, &FramedSocket::frameReceived, this, [this, framed](const QByteArray& payload) {
         if (m_pendingSockets.contains(framed)) {
@@ -90,7 +98,8 @@ void DirectTcpTransport::connectToPeer(const QString& peerId, const QString& hos
         }
     });
 
-    connect(framed, &FramedSocket::disconnected, this, &DirectTcpTransport::onPeerSocketDisconnected);
+    connect(framed, &FramedSocket::disconnected, this,
+            &DirectTcpTransport::onPeerSocketDisconnected);
     connect(framed, &FramedSocket::errorOccurred, this, [this, framed, peerId](const QString& err) {
         Q_UNUSED(err);
         if (m_pendingSockets.contains(framed)) {
@@ -143,15 +152,17 @@ void DirectTcpTransport::onNewConnection() {
         auto* framed = new FramedSocket(rawSocket, this);
         m_pendingSockets.insert(framed);
 
-        connect(framed, &FramedSocket::frameReceived, this, [this, framed](const QByteArray& payload) {
-            if (m_pendingSockets.contains(framed)) {
-                processHandshake(framed, payload);
-            } else {
-                onIncomingFrame(payload);
-            }
-        });
+        connect(framed, &FramedSocket::frameReceived, this,
+                [this, framed](const QByteArray& payload) {
+                    if (m_pendingSockets.contains(framed)) {
+                        processHandshake(framed, payload);
+                    } else {
+                        onIncomingFrame(payload);
+                    }
+                });
 
-        connect(framed, &FramedSocket::disconnected, this, &DirectTcpTransport::onPeerSocketDisconnected);
+        connect(framed, &FramedSocket::disconnected, this,
+                &DirectTcpTransport::onPeerSocketDisconnected);
 
         // Send our handshake to the newly connected inbound peer
         sendHandshake(framed);
@@ -159,7 +170,8 @@ void DirectTcpTransport::onNewConnection() {
 }
 
 void DirectTcpTransport::sendHandshake(FramedSocket* framed) {
-    if (!m_identityProvider) return;
+    if (!m_identityProvider)
+        return;
 
     QJsonObject obj;
     obj["proto"] = QStringLiteral("peerchat/handshake/1.0");
@@ -197,11 +209,11 @@ void DirectTcpTransport::processHandshake(FramedSocket* framed, const QByteArray
     QByteArray signature = QByteArray::fromHex(obj.value("signature").toString().toUtf8());
 
     // Verify signature
-    QByteArray dataToVerify = remotePeerId.toUtf8() + ":" +
-                              QByteArray::number(timestamp) + ":" +
-                              nonce.toUtf8();
+    QByteArray dataToVerify =
+        remotePeerId.toUtf8() + ":" + QByteArray::number(timestamp) + ":" + nonce.toUtf8();
 
-    if (!m_identityProvider || !m_identityProvider->verifyPeerSignature(remotePeerId, dataToVerify, signature)) {
+    if (!m_identityProvider ||
+        !m_identityProvider->verifyPeerSignature(remotePeerId, dataToVerify, signature)) {
         framed->close();
         return;
     }
@@ -236,7 +248,8 @@ void DirectTcpTransport::processHandshake(FramedSocket* framed, const QByteArray
 
 void DirectTcpTransport::onIncomingFrame(const QByteArray& payload) {
     auto* framed = qobject_cast<FramedSocket*>(sender());
-    if (!framed) return;
+    if (!framed)
+        return;
 
     if (m_socketToPeer.contains(framed)) {
         QString peerId = m_socketToPeer.value(framed);
@@ -246,7 +259,8 @@ void DirectTcpTransport::onIncomingFrame(const QByteArray& payload) {
 
 void DirectTcpTransport::onPeerSocketDisconnected() {
     auto* framed = qobject_cast<FramedSocket*>(sender());
-    if (!framed) return;
+    if (!framed)
+        return;
 
     if (m_pendingSockets.contains(framed)) {
         QString expected = m_expectedPendingPeerId.value(framed);

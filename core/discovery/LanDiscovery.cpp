@@ -9,15 +9,16 @@ namespace peerchat::discovery {
 
 const QString LanDiscovery::MULTICAST_GROUP_IPV4 = QStringLiteral("239.255.42.99");
 
-LanDiscovery::LanDiscovery(identity::IIdentityProvider* identityProvider, quint16 tcpListenPort, QObject* parent)
+LanDiscovery::LanDiscovery(identity::IIdentityProvider* identityProvider, quint16 tcpListenPort,
+                           QObject* parent)
     : IPeerDiscovery(parent), m_identityProvider(identityProvider), m_tcpListenPort(tcpListenPort) {
     m_udpSocket = new QUdpSocket(this);
     m_beaconTimer = new QTimer(this);
-    m_beaconTimer->setInterval(3000); // Send beacon every 3s
+    m_beaconTimer->setInterval(3000);  // Send beacon every 3s
     connect(m_beaconTimer, &QTimer::timeout, this, &LanDiscovery::onBeaconTimeout);
 
     m_pruneTimer = new QTimer(this);
-    m_pruneTimer->setInterval(10000); // Prune offline peers every 10s
+    m_pruneTimer->setInterval(10000);  // Prune offline peers every 10s
     connect(m_pruneTimer, &QTimer::timeout, this, &LanDiscovery::onPruneTimeout);
 
     connect(m_udpSocket, &QUdpSocket::readyRead, this, &LanDiscovery::onReadyRead);
@@ -32,7 +33,8 @@ void LanDiscovery::setTcpListenPort(quint16 port) {
 }
 
 bool LanDiscovery::start() {
-    if (m_running) return true;
+    if (m_running)
+        return true;
 
     // Bind with ShareAddress and ReuseAddressHint for multi-process multicast on same machine
     bool ok = m_udpSocket->bind(QHostAddress::AnyIPv4, DEFAULT_DISCOVERY_PORT,
@@ -49,7 +51,8 @@ bool LanDiscovery::start() {
 }
 
 void LanDiscovery::stop() {
-    if (!m_running) return;
+    if (!m_running)
+        return;
 
     m_beaconTimer->stop();
     m_pruneTimer->stop();
@@ -64,7 +67,8 @@ bool LanDiscovery::isRunning() const {
 }
 
 void LanDiscovery::broadcastAnnouncement() {
-    if (!m_running || !m_identityProvider || m_tcpListenPort == 0) return;
+    if (!m_running || !m_identityProvider || m_tcpListenPort == 0)
+        return;
 
     QJsonObject obj;
     obj["proto"] = QStringLiteral("peerchat/discovery/1.0");
@@ -91,7 +95,8 @@ void LanDiscovery::onReadyRead() {
         QByteArray data = datagram.data();
 
         QJsonDocument doc = QJsonDocument::fromJson(data);
-        if (!doc.isObject()) continue;
+        if (!doc.isObject())
+            continue;
 
         QJsonObject obj = doc.object();
         if (obj.value("proto").toString() != QLatin1String("peerchat/discovery/1.0")) {

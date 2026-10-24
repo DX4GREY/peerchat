@@ -5,7 +5,8 @@ namespace peerchat::client {
 ContactModel::ContactModel(QObject* parent) : QAbstractListModel(parent) {}
 
 int ContactModel::rowCount(const QModelIndex& parent) const {
-    if (parent.isValid()) return 0;
+    if (parent.isValid())
+        return 0;
     return static_cast<int>(m_contacts.size());
 }
 
@@ -16,12 +17,18 @@ QVariant ContactModel::data(const QModelIndex& index, int role) const {
 
     const ContactItem& item = m_contacts.at(index.row());
     switch (role) {
-        case PeerIdRole: return item.peerId;
-        case DisplayNameRole: return item.displayName;
-        case RouteTypeRole: return item.routeType;
-        case LastSeenRole: return item.lastSeen;
-        case LastMessageRole: return item.lastMessage;
-        default: return QVariant();
+        case PeerIdRole:
+            return item.peerId;
+        case DisplayNameRole:
+            return item.displayName;
+        case RouteTypeRole:
+            return item.routeType;
+        case LastSeenRole:
+            return item.lastSeen;
+        case LastMessageRole:
+            return item.lastMessage;
+        default:
+            return QVariant();
     }
 }
 
@@ -45,15 +52,19 @@ void ContactModel::updateOrAddContact(const ContactItem& item) {
     for (int i = 0; i < m_contacts.size(); ++i) {
         if (m_contacts[i].peerId == item.peerId) {
             m_contacts[i].displayName = item.displayName;
-            if (!item.routeType.isEmpty()) m_contacts[i].routeType = item.routeType;
-            if (item.lastSeen > 0) m_contacts[i].lastSeen = item.lastSeen;
-            if (!item.lastMessage.isEmpty()) m_contacts[i].lastMessage = item.lastMessage;
+            if (!item.routeType.isEmpty())
+                m_contacts[i].routeType = item.routeType;
+            if (item.lastSeen > 0)
+                m_contacts[i].lastSeen = item.lastSeen;
+            if (!item.lastMessage.isEmpty())
+                m_contacts[i].lastMessage = item.lastMessage;
             emit dataChanged(index(i), index(i));
             return;
         }
     }
 
-    beginInsertRows(QModelIndex(), static_cast<int>(m_contacts.size()), static_cast<int>(m_contacts.size()));
+    beginInsertRows(QModelIndex(), static_cast<int>(m_contacts.size()),
+                    static_cast<int>(m_contacts.size()));
     m_contacts.append(item);
     endInsertRows();
 }

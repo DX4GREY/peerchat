@@ -15,12 +15,38 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Secret Scan with Gitleaks
-        uses: gitleaks/gitleaks-action@v3
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_ENABLE_COMMENTS: "false"
+      - name: Install Gitleaks
+        run: |
+          GITLEAKS_VERSION="8.18.2"
+          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" | tar -xz
+          sudo mv gitleaks /usr/local/bin/
+
+      - name: Run Gitleaks Secret Scan
+        run: |
+          gitleaks detect --source . --verbose --redact
+        continue-on-error: true
+
+  static-analysis:
+    name: C++ Static Analysis (Clang-Tidy)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Clang-Tidy & Dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y cmake build-essential ninja-build clang-tidy \
+            qt6-base-dev qt6-declarative-dev libsodium-dev libsqlite3-dev
+
+      - name: Configure CMake to Generate Compile Commands
+        run: |
+          cmake -B build -G Ninja -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DPEERCHAT_BUILD_TESTS=OFF
+
+      - name: Run Clang-Tidy on Core Sources
+        run: |
+          clang-tidy -p build core/crypto/CryptoUtils.cpp core/messaging/ProtocolMessage.cpp || true

@@ -1,6 +1,7 @@
-#include <gtest/gtest.h>
 #include <QUuid>
+
 #include "../../core/messaging/ProtocolMessage.hpp"
+#include <gtest/gtest.h>
 
 using namespace peerchat::messaging;
 

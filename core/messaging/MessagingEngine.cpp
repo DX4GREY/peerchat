@@ -1,9 +1,10 @@
 #include "MessagingEngine.hpp"
-#include "../transfers/FileTransferManager.hpp"
 
 #include <QDateTime>
 #include <QDir>
 #include <QUuid>
+
+#include "../transfers/FileTransferManager.hpp"
 
 namespace peerchat::messaging {
 
@@ -12,8 +13,7 @@ MessagingEngine::MessagingEngine(identity::IIdentityProvider* identityProvider,
                                  networking::IPeerTransport* relayTransport,
                                  discovery::IPeerDiscovery* discovery,
                                  storage::IMessageStore* store,
-                                 transfers::IFileTransfer* transferManager,
-                                 QObject* parent)
+                                 transfers::IFileTransfer* transferManager, QObject* parent)
     : QObject(parent),
       m_identityProvider(identityProvider),
       m_directTransport(directTransport),
@@ -21,21 +21,27 @@ MessagingEngine::MessagingEngine(identity::IIdentityProvider* identityProvider,
       m_discovery(discovery),
       m_store(store),
       m_transferManager(transferManager) {
-
     if (m_directTransport) {
-        connect(m_directTransport, &networking::IPeerTransport::packetReceived, this, &MessagingEngine::onPacketReceived);
-        connect(m_directTransport, &networking::IPeerTransport::peerConnected, this, &MessagingEngine::onTransportPeerConnected);
-        connect(m_directTransport, &networking::IPeerTransport::routeChanged, this, &MessagingEngine::onTransportRouteChanged);
+        connect(m_directTransport, &networking::IPeerTransport::packetReceived, this,
+                &MessagingEngine::onPacketReceived);
+        connect(m_directTransport, &networking::IPeerTransport::peerConnected, this,
+                &MessagingEngine::onTransportPeerConnected);
+        connect(m_directTransport, &networking::IPeerTransport::routeChanged, this,
+                &MessagingEngine::onTransportRouteChanged);
     }
 
     if (m_relayTransport) {
-        connect(m_relayTransport, &networking::IPeerTransport::packetReceived, this, &MessagingEngine::onPacketReceived);
-        connect(m_relayTransport, &networking::IPeerTransport::peerConnected, this, &MessagingEngine::onTransportPeerConnected);
-        connect(m_relayTransport, &networking::IPeerTransport::routeChanged, this, &MessagingEngine::onTransportRouteChanged);
+        connect(m_relayTransport, &networking::IPeerTransport::packetReceived, this,
+                &MessagingEngine::onPacketReceived);
+        connect(m_relayTransport, &networking::IPeerTransport::peerConnected, this,
+                &MessagingEngine::onTransportPeerConnected);
+        connect(m_relayTransport, &networking::IPeerTransport::routeChanged, this,
+                &MessagingEngine::onTransportRouteChanged);
     }
 
     if (m_discovery) {
-        connect(m_discovery, &discovery::IPeerDiscovery::peerDiscovered, this, &MessagingEngine::onPeerDiscovered);
+        connect(m_discovery, &discovery::IPeerDiscovery::peerDiscovered, this,
+                &MessagingEngine::onPeerDiscovered);
     }
 }
 
@@ -71,7 +77,8 @@ bool MessagingEngine::initialize(const QString& dataDir, const QString& profileN
 }
 
 QString MessagingEngine::sendTextMessage(const QString& recipientPeerId, const QString& text) {
-    if (!m_identityProvider) return {};
+    if (!m_identityProvider)
+        return {};
 
     QString messageId = QUuid::createUuid().toString(QUuid::WithoutBraces);
     qint64 now = QDateTime::currentMSecsSinceEpoch();
@@ -87,9 +94,9 @@ QString MessagingEngine::sendTextMessage(const QString& recipientPeerId, const Q
     protoMsg.signature = m_identityProvider->sign(protoMsg.canonicalPayloadBytes());
 
     // Compute conversation ID
-    QString convId = protoMsg.senderId < protoMsg.recipientId ?
-                     protoMsg.senderId + "_" + protoMsg.recipientId :
-                     protoMsg.recipientId + "_" + protoMsg.senderId;
+    QString convId = protoMsg.senderId < protoMsg.recipientId
+                         ? protoMsg.senderId + "_" + protoMsg.recipientId
+                         : protoMsg.recipientId + "_" + protoMsg.senderId;
 
     // Save in local storage
     storage::StoredMessage sm;
@@ -130,7 +137,8 @@ QString MessagingEngine::sendFile(const QString& recipientPeerId, const QString&
     return {};
 }
 
-bool MessagingEngine::addOrUpdateContact(const QString& peerId, const QString& displayName, const QString& trustLevel) {
+bool MessagingEngine::addOrUpdateContact(const QString& peerId, const QString& displayName,
+                                         const QString& trustLevel) {
     if (m_store) {
         storage::Contact c;
         c.peerId = peerId;
@@ -157,13 +165,15 @@ networking::RouteType MessagingEngine::getRoute(const QString& peerId) const {
     if (m_relayTransport && m_relayTransport->isConnected(peerId)) {
         return networking::RouteType::Relay;
     }
-    if (m_directTransport && m_directTransport->getRouteType(peerId) == networking::RouteType::Connecting) {
+    if (m_directTransport &&
+        m_directTransport->getRouteType(peerId) == networking::RouteType::Connecting) {
         return networking::RouteType::Connecting;
     }
     return networking::RouteType::Offline;
 }
 
-void MessagingEngine::connectToPeerDirect(const QString& peerId, const QString& host, quint16 port) {
+void MessagingEngine::connectToPeerDirect(const QString& peerId, const QString& host,
+                                          quint16 port) {
     if (m_directTransport) {
         m_directTransport->connectToPeer(peerId, host, port);
     }
@@ -172,14 +182,15 @@ void MessagingEngine::connectToPeerDirect(const QString& peerId, const QString& 
 void MessagingEngine::onPacketReceived(const QString& peerId, const QByteArray& packet) {
     auto optMsg = ProtocolMessage::fromJson(packet);
     if (!optMsg.has_value()) {
-        return; // Drop malformed
+        return;  // Drop malformed
     }
 
     const ProtocolMessage& msg = optMsg.value();
 
     // Verify sender signature
-    if (!m_identityProvider || !m_identityProvider->verifyPeerSignature(msg.senderId, msg.canonicalPayloadBytes(), msg.signature)) {
-        return; // Drop tampered message
+    if (!m_identityProvider || !m_identityProvider->verifyPeerSignature(
+                                   msg.senderId, msg.canonicalPayloadBytes(), msg.signature)) {
+        return;  // Drop tampered message
     }
 
     // Replay/Duplicate check
@@ -188,16 +199,15 @@ void MessagingEngine::onPacketReceived(const QString& peerId, const QByteArray& 
     }
     m_processedMessageIds.insert(msg.id);
     if (m_processedMessageIds.size() > 5000) {
-        m_processedMessageIds.clear(); // Keep bounded cache
+        m_processedMessageIds.clear();  // Keep bounded cache
     }
 
     switch (msg.type) {
         case MessageType::Text: {
             QString convId = msg.conversationId;
             if (convId.isEmpty()) {
-                convId = msg.senderId < msg.recipientId ?
-                         msg.senderId + "_" + msg.recipientId :
-                         msg.recipientId + "_" + msg.senderId;
+                convId = msg.senderId < msg.recipientId ? msg.senderId + "_" + msg.recipientId
+                                                        : msg.recipientId + "_" + msg.senderId;
             }
 
             storage::StoredMessage sm;
@@ -256,7 +266,8 @@ void MessagingEngine::onPacketReceived(const QString& peerId, const QByteArray& 
 }
 
 void MessagingEngine::sendDeliveryAck(const QString& recipientPeerId, const QString& ackMessageId) {
-    if (!m_identityProvider) return;
+    if (!m_identityProvider)
+        return;
 
     ProtocolMessage ack;
     ack.version = 1;

@@ -1,16 +1,17 @@
 #pragma once
 
 #include <QObject>
-#include <QString>
 #include <QStandardPaths>
+#include <QString>
+
+#include "../../core/diagnostics/DiagnosticsService.hpp"
+#include "../../core/discovery/LanDiscovery.hpp"
 #include "../../core/identity/SodiumIdentityProvider.hpp"
-#include "../../core/storage/SqliteMessageStore.hpp"
+#include "../../core/messaging/MessagingEngine.hpp"
 #include "../../core/networking/DirectTcpTransport.hpp"
 #include "../../core/networking/RelayTransport.hpp"
-#include "../../core/discovery/LanDiscovery.hpp"
+#include "../../core/storage/SqliteMessageStore.hpp"
 #include "../../core/transfers/FileTransferManager.hpp"
-#include "../../core/messaging/MessagingEngine.hpp"
-#include "../../core/diagnostics/DiagnosticsService.hpp"
 #include "ContactModel.hpp"
 #include "MessageModel.hpp"
 #include "TransferModel.hpp"
@@ -21,7 +22,8 @@ class ChatController : public QObject {
     Q_OBJECT
 
     Q_PROPERTY(QString myPeerId READ myPeerId NOTIFY myPeerIdChanged)
-    Q_PROPERTY(QString myDisplayName READ myDisplayName WRITE setMyDisplayName NOTIFY myDisplayNameChanged)
+    Q_PROPERTY(
+        QString myDisplayName READ myDisplayName WRITE setMyDisplayName NOTIFY myDisplayNameChanged)
     Q_PROPERTY(QString activeContactPeerId READ activeContactPeerId NOTIFY activeContactChanged)
     Q_PROPERTY(QString activeContactName READ activeContactName NOTIFY activeContactChanged)
     Q_PROPERTY(QString activeRouteType READ activeRouteType NOTIFY activeRouteChanged)
@@ -35,7 +37,8 @@ public:
     explicit ChatController(QObject* parent = nullptr);
     ~ChatController() override;
 
-    bool initialize(const QString& profile = QString(), quint16 preferredPort = 0, const QString& customStoragePath = QString());
+    bool initialize(const QString& profile = QString(), quint16 preferredPort = 0,
+                    const QString& customStoragePath = QString());
 
     QString myPeerId() const;
     QString myDisplayName() const;
@@ -76,7 +79,8 @@ private slots:
     void onMessageReceived(const storage::StoredMessage& msg);
     void onMessageDelivered(const QString& msgId, qint64 deliveredAt);
     void onPeerRouteChanged(const QString& peerId, const QString& routeString);
-    void onContactDiscovered(const QString& peerId, const QString& displayName, const QString& host, quint16 port);
+    void onContactDiscovered(const QString& peerId, const QString& displayName, const QString& host,
+                             quint16 port);
 
 private:
     identity::SodiumIdentityProvider* m_identity{nullptr};

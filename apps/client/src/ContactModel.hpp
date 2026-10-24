@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QAbstractListModel>
+
 #include "../../core/storage/IMessageStore.hpp"
 
 namespace peerchat::client {
@@ -8,7 +9,7 @@ namespace peerchat::client {
 struct ContactItem {
     QString peerId;
     QString displayName;
-    QString routeType{"Offline"}; // "Direct", "Relay", "Connecting", "Offline"
+    QString routeType{"Offline"};  // "Direct", "Relay", "Connecting", "Offline"
     qint64 lastSeen{0};
     QString lastMessage;
 };

@@ -2,6 +2,11 @@ name: Android Build
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - 'apps/client/platform/android/**'
+      - '.github/workflows/android-build.yml'
   pull_request:
     paths:
       - 'apps/client/platform/android/**'
@@ -12,15 +17,15 @@ permissions:
 
 jobs:
   build-android:
-    name: Build Android APK
+    name: Build Android APK (arm64-v8a)
     runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Setup Java 17
-        uses: actions/setup-java@v6
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -30,8 +35,8 @@ jobs:
         with:
           ndk-version: r25c
 
-      - name: Install Ninja
-        run: sudo apt-get update && sudo apt-get install -y ninja-build
+      - name: Install Build Tools
+        run: sudo apt-get update && sudo apt-get install -y ninja-build autoconf libtool
 
       - name: Install Qt 6 Android
         uses: jurplel/install-qt-action@v4
@@ -40,6 +45,14 @@ jobs:
           target: 'android'
           arch: 'android_arm64_v8a'
 
+      - name: Cross-Compile libsodium for Android ARM64
+        run: |
+          git clone --depth 1 -b stable https://github.com/jedisct1/libsodium.git
+          cd libsodium
+          export ANDROID_NDK_HOME=${ANDROID_NDK_ROOT}
+          ./dist-build/android-armv8-a.sh
+          echo "LIBSODIUM_DIR=$(pwd)/libsodium-android-armv8-a" >> $GITHUB_ENV
+
       - name: Configure CMake for Android
         run: |
           cmake -B build-android -G Ninja \
@@ -47,9 +60,27 @@ jobs:
             -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK_ROOT}/build/cmake/android.toolchain.cmake \
             -DANDROID_ABI=arm64-v8a \
             -DANDROID_PLATFORM=android-26 \
+            -DCMAKE_PREFIX_PATH="${Qt6_DIR};${{ env.LIBSODIUM_DIR }}" \
+            -DLIBSODIUM_INCLUDE_DIR="${{ env.LIBSODIUM_DIR }}/include" \
+            -DLIBSODIUM_LIBRARY="${{ env.LIBSODIUM_DIR }}/lib/libsodium.a" \
             -DPEERCHAT_BUILD_TESTS=OFF \
             -DPEERCHAT_BUILD_RELAY=OFF
 
-      - name: Build Android Package
+      - name: Build Android Targets
         run: |
-          cmake --build build-android --target PeerChat
+          cmake --build build-android
+
+      - name: Find and Package Android APK
+        run: |
+          mkdir -p dist/android
+          find build-android -name "*.apk" -exec cp {} dist/android/ \; || true
+          if [ -d "dist/android" ] && [ "$(ls -A dist/android)" ]; then
+            cd dist/android
+            sha256sum *.apk > sha256sums.txt || true
+          fi
+
+      - name: Upload Android Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: peerchat-android-arm64
+          path: dist/android/

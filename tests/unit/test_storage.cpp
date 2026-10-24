@@ -1,6 +1,7 @@
-#include <gtest/gtest.h>
 #include <QTemporaryDir>
+
 #include "../../core/storage/SqliteMessageStore.hpp"
+#include <gtest/gtest.h>
 
 using namespace peerchat::storage;
 

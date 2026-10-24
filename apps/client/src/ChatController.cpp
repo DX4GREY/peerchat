@@ -7,8 +7,10 @@
 namespace peerchat::client {
 
 static QString formatBytes(qint64 bytes) {
-    if (bytes < 1024) return QString::number(bytes) + " B";
-    if (bytes < 1024 * 1024) return QString::number(static_cast<double>(bytes) / 1024.0, 'f', 1) + " KB";
+    if (bytes < 1024)
+        return QString::number(bytes) + " B";
+    if (bytes < 1024 * 1024)
+        return QString::number(static_cast<double>(bytes) / 1024.0, 'f', 1) + " KB";
     return QString::number(static_cast<double>(bytes) / (1024.0 * 1024.0), 'f', 1) + " MB";
 }
 
@@ -16,16 +18,17 @@ ChatController::ChatController(QObject* parent)
     : QObject(parent),
       m_contactModel(new ContactModel(this)),
       m_messageModel(new MessageModel(this)),
-      m_transferModel(new TransferModel(this)) {
-}
+      m_transferModel(new TransferModel(this)) {}
 
 ChatController::~ChatController() = default;
 
-bool ChatController::initialize(const QString& profile, quint16 preferredPort, const QString& customStoragePath) {
+bool ChatController::initialize(const QString& profile, quint16 preferredPort,
+                                const QString& customStoragePath) {
     QString storageDir = customStoragePath;
     if (storageDir.isEmpty()) {
         QString base = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-        if (base.isEmpty()) base = QDir::homePath() + "/.peerchat";
+        if (base.isEmpty())
+            base = QDir::homePath() + "/.peerchat";
         if (!profile.isEmpty()) {
             base += "/" + profile;
         }
@@ -33,7 +36,8 @@ bool ChatController::initialize(const QString& profile, quint16 preferredPort, c
     }
 
     QDir d(storageDir);
-    if (!d.exists()) d.mkpath(".");
+    if (!d.exists())
+        d.mkpath(".");
 
     m_identity = new identity::SodiumIdentityProvider(this);
     m_store = new storage::SqliteMessageStore(this);
@@ -41,54 +45,64 @@ bool ChatController::initialize(const QString& profile, quint16 preferredPort, c
     m_relayTransport = new networking::RelayTransport(m_identity, this);
 
     QString downloadsDir = storageDir + "/downloads";
-    m_transferMgr = new transfers::FileTransferManager(m_directTransport, m_store, m_identity, downloadsDir, this);
+    m_transferMgr = new transfers::FileTransferManager(m_directTransport, m_store, m_identity,
+                                                       downloadsDir, this);
     m_discovery = new discovery::LanDiscovery(m_identity, preferredPort, this);
     m_diagnostics = new diagnostics::DiagnosticsService(this);
 
     m_engine = new messaging::MessagingEngine(m_identity, m_directTransport, m_relayTransport,
                                               m_discovery, m_store, m_transferMgr, this);
 
-    connect(m_engine, &messaging::MessagingEngine::messageReceived, this, &ChatController::onMessageReceived);
-    connect(m_engine, &messaging::MessagingEngine::messageDelivered, this, &ChatController::onMessageDelivered);
-    connect(m_engine, &messaging::MessagingEngine::peerRouteChanged, this, &ChatController::onPeerRouteChanged);
-    connect(m_engine, &messaging::MessagingEngine::contactDiscovered, this, &ChatController::onContactDiscovered);
+    connect(m_engine, &messaging::MessagingEngine::messageReceived, this,
+            &ChatController::onMessageReceived);
+    connect(m_engine, &messaging::MessagingEngine::messageDelivered, this,
+            &ChatController::onMessageDelivered);
+    connect(m_engine, &messaging::MessagingEngine::peerRouteChanged, this,
+            &ChatController::onPeerRouteChanged);
+    connect(m_engine, &messaging::MessagingEngine::contactDiscovered, this,
+            &ChatController::onContactDiscovered);
 
-    connect(m_transferMgr, &transfers::IFileTransfer::transferOffered, this, [this](const transfers::TransferInfo& info) {
-        TransferListItem item;
-        item.transferId = info.transferId;
-        item.fileName = info.fileName;
-        item.fileSize = info.fileSize;
-        item.progress = 0.0;
-        item.status = "offered";
-        item.isOutgoing = false;
-        item.sizeStr = formatBytes(info.fileSize);
-        m_transferModel->updateTransfer(item);
-        emit newNotification("Incoming File", info.fileName + " (" + item.sizeStr + ")");
-    });
+    connect(m_transferMgr, &transfers::IFileTransfer::transferOffered, this,
+            [this](const transfers::TransferInfo& info) {
+                TransferListItem item;
+                item.transferId = info.transferId;
+                item.fileName = info.fileName;
+                item.fileSize = info.fileSize;
+                item.progress = 0.0;
+                item.status = "offered";
+                item.isOutgoing = false;
+                item.sizeStr = formatBytes(info.fileSize);
+                m_transferModel->updateTransfer(item);
+                emit newNotification("Incoming File", info.fileName + " (" + item.sizeStr + ")");
+            });
 
-    connect(m_transferMgr, &transfers::IFileTransfer::transferProgress, this, [this](const QString& id, qint64 done, qint64 total) {
-        TransferListItem item;
-        item.transferId = id;
-        item.transferredBytes = done;
-        item.fileSize = total;
-        item.progress = total > 0 ? static_cast<double>(done) / static_cast<double>(total) : 0.0;
-        item.status = "transferring";
-        item.sizeStr = formatBytes(done) + " / " + formatBytes(total);
-        m_transferModel->updateTransfer(item);
-    });
+    connect(m_transferMgr, &transfers::IFileTransfer::transferProgress, this,
+            [this](const QString& id, qint64 done, qint64 total) {
+                TransferListItem item;
+                item.transferId = id;
+                item.transferredBytes = done;
+                item.fileSize = total;
+                item.progress =
+                    total > 0 ? static_cast<double>(done) / static_cast<double>(total) : 0.0;
+                item.status = "transferring";
+                item.sizeStr = formatBytes(done) + " / " + formatBytes(total);
+                m_transferModel->updateTransfer(item);
+            });
 
-    connect(m_transferMgr, &transfers::IFileTransfer::transferCompleted, this, [this](const QString& id, const QString& path) {
-        TransferListItem item;
-        item.transferId = id;
-        item.filePath = path;
-        item.progress = 1.0;
-        item.status = "completed";
-        m_transferModel->updateTransfer(item);
-        emit newNotification("Transfer Completed", QFileInfo(path).fileName());
-    });
+    connect(m_transferMgr, &transfers::IFileTransfer::transferCompleted, this,
+            [this](const QString& id, const QString& path) {
+                TransferListItem item;
+                item.transferId = id;
+                item.filePath = path;
+                item.progress = 1.0;
+                item.status = "completed";
+                m_transferModel->updateTransfer(item);
+                emit newNotification("Transfer Completed", QFileInfo(path).fileName());
+            });
 
     bool ok = m_engine->initialize(storageDir, profile);
-    if (!ok) return false;
+    if (!ok)
+        return false;
 
     if (preferredPort > 0) {
         m_directTransport->startListening(preferredPort);
@@ -137,7 +151,8 @@ QString ChatController::activeContactName() const {
 }
 
 QString ChatController::activeRouteType() const {
-    if (m_activeContactPeerId.isEmpty() || !m_engine) return QStringLiteral("Offline");
+    if (m_activeContactPeerId.isEmpty() || !m_engine)
+        return QStringLiteral("Offline");
     return networking::routeTypeToString(m_engine->getRoute(m_activeContactPeerId));
 }
 
@@ -234,7 +249,8 @@ void ChatController::sendFile(const QString& filePath) {
 }
 
 void ChatController::addContact(const QString& peerId, const QString& displayName) {
-    if (peerId.trimmed().isEmpty()) return;
+    if (peerId.trimmed().isEmpty())
+        return;
 
     QString cleanPeerId = peerId.trimmed();
     QString name = displayName.trimmed().isEmpty() ? cleanPeerId.left(12) : displayName.trimmed();
@@ -313,7 +329,8 @@ void ChatController::onPeerRouteChanged(const QString& peerId, const QString& ro
     }
 }
 
-void ChatController::onContactDiscovered(const QString& peerId, const QString& displayName, const QString& host, quint16 port) {
+void ChatController::onContactDiscovered(const QString& peerId, const QString& displayName,
+                                         const QString& host, quint16 port) {
     Q_UNUSED(host);
     Q_UNUSED(port);
     ContactItem ci;

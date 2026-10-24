@@ -4,17 +4,12 @@
 #include <QList>
 #include <QObject>
 #include <QString>
+
 #include <optional>
 
 namespace peerchat::storage {
 
-enum class MessageStatus {
-    Sending,
-    Sent,
-    Delivered,
-    Read,
-    Failed
-};
+enum class MessageStatus { Sending, Sent, Delivered, Read, Failed };
 
 QString messageStatusToString(MessageStatus status);
 MessageStatus stringToMessageStatus(const QString& str);
@@ -22,7 +17,7 @@ MessageStatus stringToMessageStatus(const QString& str);
 struct Contact {
     QString peerId;
     QString displayName;
-    QString trustLevel{"untrusted"}; // "untrusted", "verified", "pinned"
+    QString trustLevel{"untrusted"};  // "untrusted", "verified", "pinned"
     qint64 lastSeen{0};
     bool isBlocked{false};
 };
@@ -49,7 +44,7 @@ struct StoredTransfer {
     QString sha256;
     qint64 transferredBytes{0};
     QString status{"pending"};
-    QString direction{"outgoing"}; // "outgoing" or "incoming"
+    QString direction{"outgoing"};  // "outgoing" or "incoming"
     qint64 timestamp{0};
 };
 
@@ -70,13 +65,16 @@ public:
 
     // Messages
     virtual bool saveMessage(const StoredMessage& message) = 0;
-    virtual bool updateMessageStatus(const QString& messageId, MessageStatus status, qint64 deliveredAt = 0) = 0;
+    virtual bool updateMessageStatus(const QString& messageId, MessageStatus status,
+                                     qint64 deliveredAt = 0) = 0;
     virtual std::optional<StoredMessage> getMessage(const QString& messageId) = 0;
-    virtual QList<StoredMessage> getMessagesForConversation(const QString& conversationId, int limit = 50, int offset = 0) = 0;
+    virtual QList<StoredMessage> getMessagesForConversation(const QString& conversationId,
+                                                            int limit = 50, int offset = 0) = 0;
 
     // Transfers
     virtual bool saveTransfer(const StoredTransfer& transfer) = 0;
-    virtual bool updateTransferProgress(const QString& transferId, qint64 transferredBytes, const QString& status) = 0;
+    virtual bool updateTransferProgress(const QString& transferId, qint64 transferredBytes,
+                                        const QString& status) = 0;
     virtual std::optional<StoredTransfer> getTransfer(const QString& transferId) = 0;
     virtual QList<StoredTransfer> getAllTransfers() = 0;
 

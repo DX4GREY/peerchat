@@ -2,34 +2,44 @@
 
 #include <QDir>
 #include <QFileInfo>
-#include <QSqlQuery>
 #include <QSqlError>
-#include <QVariant>
+#include <QSqlQuery>
 #include <QUuid>
+#include <QVariant>
 
 namespace peerchat::storage {
 
 QString messageStatusToString(MessageStatus status) {
     switch (status) {
-        case MessageStatus::Sending: return QStringLiteral("sending");
-        case MessageStatus::Sent: return QStringLiteral("sent");
-        case MessageStatus::Delivered: return QStringLiteral("delivered");
-        case MessageStatus::Read: return QStringLiteral("read");
-        case MessageStatus::Failed: default: return QStringLiteral("failed");
+        case MessageStatus::Sending:
+            return QStringLiteral("sending");
+        case MessageStatus::Sent:
+            return QStringLiteral("sent");
+        case MessageStatus::Delivered:
+            return QStringLiteral("delivered");
+        case MessageStatus::Read:
+            return QStringLiteral("read");
+        case MessageStatus::Failed:
+        default:
+            return QStringLiteral("failed");
     }
 }
 
 MessageStatus stringToMessageStatus(const QString& str) {
-    if (str == QLatin1String("sending")) return MessageStatus::Sending;
-    if (str == QLatin1String("sent")) return MessageStatus::Sent;
-    if (str == QLatin1String("delivered")) return MessageStatus::Delivered;
-    if (str == QLatin1String("read")) return MessageStatus::Read;
+    if (str == QLatin1String("sending"))
+        return MessageStatus::Sending;
+    if (str == QLatin1String("sent"))
+        return MessageStatus::Sent;
+    if (str == QLatin1String("delivered"))
+        return MessageStatus::Delivered;
+    if (str == QLatin1String("read"))
+        return MessageStatus::Read;
     return MessageStatus::Failed;
 }
 
-SqliteMessageStore::SqliteMessageStore(QObject* parent)
-    : IMessageStore(parent) {
-    m_connectionName = QStringLiteral("peerchat_db_") + QUuid::createUuid().toString(QUuid::WithoutBraces);
+SqliteMessageStore::SqliteMessageStore(QObject* parent) : IMessageStore(parent) {
+    m_connectionName =
+        QStringLiteral("peerchat_db_") + QUuid::createUuid().toString(QUuid::WithoutBraces);
 }
 
 SqliteMessageStore::~SqliteMessageStore() {
@@ -82,58 +92,59 @@ bool SqliteMessageStore::createTables() {
     q.exec(QStringLiteral("PRAGMA foreign_keys = ON;"));
 
     // Contacts table
-    bool ok = q.exec(QStringLiteral(
-        "CREATE TABLE IF NOT EXISTS contacts ("
-        "  peer_id TEXT PRIMARY KEY NOT NULL,"
-        "  display_name TEXT NOT NULL,"
-        "  trust_level TEXT NOT NULL DEFAULT 'untrusted',"
-        "  last_seen INTEGER NOT NULL DEFAULT 0,"
-        "  is_blocked INTEGER NOT NULL DEFAULT 0"
-        ");"
-    ));
-    if (!ok) return false;
+    bool ok =
+        q.exec(QStringLiteral("CREATE TABLE IF NOT EXISTS contacts ("
+                              "  peer_id TEXT PRIMARY KEY NOT NULL,"
+                              "  display_name TEXT NOT NULL,"
+                              "  trust_level TEXT NOT NULL DEFAULT 'untrusted',"
+                              "  last_seen INTEGER NOT NULL DEFAULT 0,"
+                              "  is_blocked INTEGER NOT NULL DEFAULT 0"
+                              ");"));
+    if (!ok)
+        return false;
 
     // Messages table
-    ok = q.exec(QStringLiteral(
-        "CREATE TABLE IF NOT EXISTS messages ("
-        "  id TEXT PRIMARY KEY NOT NULL,"
-        "  conversation_id TEXT NOT NULL,"
-        "  sender_id TEXT NOT NULL,"
-        "  recipient_id TEXT NOT NULL,"
-        "  type TEXT NOT NULL DEFAULT 'text',"
-        "  content TEXT,"
-        "  media_path TEXT,"
-        "  status TEXT NOT NULL DEFAULT 'sending',"
-        "  timestamp INTEGER NOT NULL,"
-        "  delivered_at INTEGER NOT NULL DEFAULT 0"
-        ");"
-    ));
-    if (!ok) return false;
+    ok =
+        q.exec(QStringLiteral("CREATE TABLE IF NOT EXISTS messages ("
+                              "  id TEXT PRIMARY KEY NOT NULL,"
+                              "  conversation_id TEXT NOT NULL,"
+                              "  sender_id TEXT NOT NULL,"
+                              "  recipient_id TEXT NOT NULL,"
+                              "  type TEXT NOT NULL DEFAULT 'text',"
+                              "  content TEXT,"
+                              "  media_path TEXT,"
+                              "  status TEXT NOT NULL DEFAULT 'sending',"
+                              "  timestamp INTEGER NOT NULL,"
+                              "  delivered_at INTEGER NOT NULL DEFAULT 0"
+                              ");"));
+    if (!ok)
+        return false;
 
     // Create index on conversation_id and timestamp
-    q.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS idx_msg_conv_time ON messages(conversation_id, timestamp);"));
+    q.exec(QStringLiteral(
+        "CREATE INDEX IF NOT EXISTS idx_msg_conv_time ON messages(conversation_id, timestamp);"));
 
     // Transfers table
-    ok = q.exec(QStringLiteral(
-        "CREATE TABLE IF NOT EXISTS transfers ("
-        "  id TEXT PRIMARY KEY NOT NULL,"
-        "  message_id TEXT NOT NULL,"
-        "  file_name TEXT NOT NULL,"
-        "  file_path TEXT NOT NULL,"
-        "  file_size INTEGER NOT NULL DEFAULT 0,"
-        "  sha256 TEXT NOT NULL,"
-        "  transferred_bytes INTEGER NOT NULL DEFAULT 0,"
-        "  status TEXT NOT NULL DEFAULT 'pending',"
-        "  direction TEXT NOT NULL DEFAULT 'outgoing',"
-        "  timestamp INTEGER NOT NULL DEFAULT 0"
-        ");"
-    ));
+    ok =
+        q.exec(QStringLiteral("CREATE TABLE IF NOT EXISTS transfers ("
+                              "  id TEXT PRIMARY KEY NOT NULL,"
+                              "  message_id TEXT NOT NULL,"
+                              "  file_name TEXT NOT NULL,"
+                              "  file_path TEXT NOT NULL,"
+                              "  file_size INTEGER NOT NULL DEFAULT 0,"
+                              "  sha256 TEXT NOT NULL,"
+                              "  transferred_bytes INTEGER NOT NULL DEFAULT 0,"
+                              "  status TEXT NOT NULL DEFAULT 'pending',"
+                              "  direction TEXT NOT NULL DEFAULT 'outgoing',"
+                              "  timestamp INTEGER NOT NULL DEFAULT 0"
+                              ");"));
     return ok;
 }
 
 bool SqliteMessageStore::upsertContact(const Contact& contact) {
     QMutexLocker locker(&m_mutex);
-    if (!m_isOpen) return false;
+    if (!m_isOpen)
+        return false;
 
     QSqlDatabase db = QSqlDatabase::database(m_connectionName);
     QSqlQuery q(db);
@@ -144,8 +155,7 @@ bool SqliteMessageStore::upsertContact(const Contact& contact) {
         "  display_name = excluded.display_name, "
         "  trust_level = excluded.trust_level, "
         "  last_seen = excluded.last_seen, "
-        "  is_blocked = excluded.is_blocked;"
-    ));
+        "  is_blocked = excluded.is_blocked;"));
     q.bindValue(":peer_id", contact.peerId);
     q.bindValue(":display_name", contact.displayName);
     q.bindValue(":trust_level", contact.trustLevel);
@@ -161,11 +171,14 @@ bool SqliteMessageStore::upsertContact(const Contact& contact) {
 
 std::optional<Contact> SqliteMessageStore::getContact(const QString& peerId) {
     QMutexLocker locker(&m_mutex);
-    if (!m_isOpen) return std::nullopt;
+    if (!m_isOpen)
+        return std::nullopt;
 
     QSqlDatabase db = QSqlDatabase::database(m_connectionName);
     QSqlQuery q(db);
-    q.prepare(QStringLiteral("SELECT peer_id, display_name, trust_level, last_seen, is_blocked FROM contacts WHERE peer_id = :peer_id"));
+    q.prepare(
+        QStringLiteral("SELECT peer_id, display_name, trust_level, last_seen, is_blocked FROM "
+                       "contacts WHERE peer_id = :peer_id"));
     q.bindValue(":peer_id", peerId);
 
     if (q.exec() && q.next()) {
@@ -183,10 +196,13 @@ std::optional<Contact> SqliteMessageStore::getContact(const QString& peerId) {
 QList<Contact> SqliteMessageStore::getAllContacts() {
     QMutexLocker locker(&m_mutex);
     QList<Contact> list;
-    if (!m_isOpen) return list;
+    if (!m_isOpen)
+        return list;
 
     QSqlDatabase db = QSqlDatabase::database(m_connectionName);
-    QSqlQuery q(QStringLiteral("SELECT peer_id, display_name, trust_level, last_seen, is_blocked FROM contacts ORDER BY last_seen DESC"), db);
+    QSqlQuery q(QStringLiteral("SELECT peer_id, display_name, trust_level, last_seen, is_blocked "
+                               "FROM contacts ORDER BY last_seen DESC"),
+                db);
     while (q.next()) {
         Contact c;
         c.peerId = q.value(0).toString();
@@ -201,7 +217,8 @@ QList<Contact> SqliteMessageStore::getAllContacts() {
 
 bool SqliteMessageStore::deleteContact(const QString& peerId) {
     QMutexLocker locker(&m_mutex);
-    if (!m_isOpen) return false;
+    if (!m_isOpen)
+        return false;
 
     QSqlDatabase db = QSqlDatabase::database(m_connectionName);
     QSqlQuery q(db);
@@ -212,17 +229,19 @@ bool SqliteMessageStore::deleteContact(const QString& peerId) {
 
 bool SqliteMessageStore::saveMessage(const StoredMessage& message) {
     QMutexLocker locker(&m_mutex);
-    if (!m_isOpen) return false;
+    if (!m_isOpen)
+        return false;
 
     QSqlDatabase db = QSqlDatabase::database(m_connectionName);
     QSqlQuery q(db);
-    q.prepare(QStringLiteral(
-        "INSERT INTO messages (id, conversation_id, sender_id, recipient_id, type, content, media_path, status, timestamp, delivered_at) "
-        "VALUES (:id, :conversation_id, :sender_id, :recipient_id, :type, :content, :media_path, :status, :timestamp, :delivered_at) "
-        "ON CONFLICT(id) DO UPDATE SET "
-        "  status = excluded.status, "
-        "  delivered_at = excluded.delivered_at;"
-    ));
+    q.prepare(
+        QStringLiteral("INSERT INTO messages (id, conversation_id, sender_id, recipient_id, type, "
+                       "content, media_path, status, timestamp, delivered_at) "
+                       "VALUES (:id, :conversation_id, :sender_id, :recipient_id, :type, :content, "
+                       ":media_path, :status, :timestamp, :delivered_at) "
+                       "ON CONFLICT(id) DO UPDATE SET "
+                       "  status = excluded.status, "
+                       "  delivered_at = excluded.delivered_at;"));
     q.bindValue(":id", message.id);
     q.bindValue(":conversation_id", message.conversationId);
     q.bindValue(":sender_id", message.senderId);
@@ -241,14 +260,17 @@ bool SqliteMessageStore::saveMessage(const StoredMessage& message) {
     return false;
 }
 
-bool SqliteMessageStore::updateMessageStatus(const QString& messageId, MessageStatus status, qint64 deliveredAt) {
+bool SqliteMessageStore::updateMessageStatus(const QString& messageId, MessageStatus status,
+                                             qint64 deliveredAt) {
     QMutexLocker locker(&m_mutex);
-    if (!m_isOpen) return false;
+    if (!m_isOpen)
+        return false;
 
     QSqlDatabase db = QSqlDatabase::database(m_connectionName);
     QSqlQuery q(db);
     if (deliveredAt > 0) {
-        q.prepare(QStringLiteral("UPDATE messages SET status = :status, delivered_at = :delivered_at WHERE id = :id"));
+        q.prepare(QStringLiteral(
+            "UPDATE messages SET status = :status, delivered_at = :delivered_at WHERE id = :id"));
         q.bindValue(":status", messageStatusToString(status));
         q.bindValue(":delivered_at", deliveredAt);
         q.bindValue(":id", messageId);
@@ -267,11 +289,14 @@ bool SqliteMessageStore::updateMessageStatus(const QString& messageId, MessageSt
 
 std::optional<StoredMessage> SqliteMessageStore::getMessage(const QString& messageId) {
     QMutexLocker locker(&m_mutex);
-    if (!m_isOpen) return std::nullopt;
+    if (!m_isOpen)
+        return std::nullopt;
 
     QSqlDatabase db = QSqlDatabase::database(m_connectionName);
     QSqlQuery q(db);
-    q.prepare(QStringLiteral("SELECT id, conversation_id, sender_id, recipient_id, type, content, media_path, status, timestamp, delivered_at FROM messages WHERE id = :id"));
+    q.prepare(
+        QStringLiteral("SELECT id, conversation_id, sender_id, recipient_id, type, content, "
+                       "media_path, status, timestamp, delivered_at FROM messages WHERE id = :id"));
     q.bindValue(":id", messageId);
 
     if (q.exec() && q.next()) {
@@ -291,18 +316,20 @@ std::optional<StoredMessage> SqliteMessageStore::getMessage(const QString& messa
     return std::nullopt;
 }
 
-QList<StoredMessage> SqliteMessageStore::getMessagesForConversation(const QString& conversationId, int limit, int offset) {
+QList<StoredMessage> SqliteMessageStore::getMessagesForConversation(const QString& conversationId,
+                                                                    int limit, int offset) {
     QMutexLocker locker(&m_mutex);
     QList<StoredMessage> list;
-    if (!m_isOpen) return list;
+    if (!m_isOpen)
+        return list;
 
     QSqlDatabase db = QSqlDatabase::database(m_connectionName);
     QSqlQuery q(db);
-    q.prepare(QStringLiteral(
-        "SELECT id, conversation_id, sender_id, recipient_id, type, content, media_path, status, timestamp, delivered_at "
-        "FROM messages WHERE conversation_id = :conversation_id "
-        "ORDER BY timestamp ASC LIMIT :limit OFFSET :offset"
-    ));
+    q.prepare(
+        QStringLiteral("SELECT id, conversation_id, sender_id, recipient_id, type, content, "
+                       "media_path, status, timestamp, delivered_at "
+                       "FROM messages WHERE conversation_id = :conversation_id "
+                       "ORDER BY timestamp ASC LIMIT :limit OFFSET :offset"));
     q.bindValue(":conversation_id", conversationId);
     q.bindValue(":limit", limit);
     q.bindValue(":offset", offset);
@@ -328,17 +355,19 @@ QList<StoredMessage> SqliteMessageStore::getMessagesForConversation(const QStrin
 
 bool SqliteMessageStore::saveTransfer(const StoredTransfer& transfer) {
     QMutexLocker locker(&m_mutex);
-    if (!m_isOpen) return false;
+    if (!m_isOpen)
+        return false;
 
     QSqlDatabase db = QSqlDatabase::database(m_connectionName);
     QSqlQuery q(db);
-    q.prepare(QStringLiteral(
-        "INSERT INTO transfers (id, message_id, file_name, file_path, file_size, sha256, transferred_bytes, status, direction, timestamp) "
-        "VALUES (:id, :message_id, :file_name, :file_path, :file_size, :sha256, :transferred_bytes, :status, :direction, :timestamp) "
-        "ON CONFLICT(id) DO UPDATE SET "
-        "  transferred_bytes = excluded.transferred_bytes, "
-        "  status = excluded.status;"
-    ));
+    q.prepare(
+        QStringLiteral("INSERT INTO transfers (id, message_id, file_name, file_path, file_size, "
+                       "sha256, transferred_bytes, status, direction, timestamp) "
+                       "VALUES (:id, :message_id, :file_name, :file_path, :file_size, :sha256, "
+                       ":transferred_bytes, :status, :direction, :timestamp) "
+                       "ON CONFLICT(id) DO UPDATE SET "
+                       "  transferred_bytes = excluded.transferred_bytes, "
+                       "  status = excluded.status;"));
     q.bindValue(":id", transfer.id);
     q.bindValue(":message_id", transfer.messageId);
     q.bindValue(":file_name", transfer.fileName);
@@ -357,13 +386,17 @@ bool SqliteMessageStore::saveTransfer(const StoredTransfer& transfer) {
     return false;
 }
 
-bool SqliteMessageStore::updateTransferProgress(const QString& transferId, qint64 transferredBytes, const QString& status) {
+bool SqliteMessageStore::updateTransferProgress(const QString& transferId, qint64 transferredBytes,
+                                                const QString& status) {
     QMutexLocker locker(&m_mutex);
-    if (!m_isOpen) return false;
+    if (!m_isOpen)
+        return false;
 
     QSqlDatabase db = QSqlDatabase::database(m_connectionName);
     QSqlQuery q(db);
-    q.prepare(QStringLiteral("UPDATE transfers SET transferred_bytes = :transferred_bytes, status = :status WHERE id = :id"));
+    q.prepare(
+        QStringLiteral("UPDATE transfers SET transferred_bytes = :transferred_bytes, status = "
+                       ":status WHERE id = :id"));
     q.bindValue(":transferred_bytes", transferredBytes);
     q.bindValue(":status", status);
     q.bindValue(":id", transferId);
@@ -380,11 +413,14 @@ bool SqliteMessageStore::updateTransferProgress(const QString& transferId, qint6
 
 std::optional<StoredTransfer> SqliteMessageStore::getTransfer(const QString& transferId) {
     QMutexLocker locker(&m_mutex);
-    if (!m_isOpen) return std::nullopt;
+    if (!m_isOpen)
+        return std::nullopt;
 
     QSqlDatabase db = QSqlDatabase::database(m_connectionName);
     QSqlQuery q(db);
-    q.prepare(QStringLiteral("SELECT id, message_id, file_name, file_path, file_size, sha256, transferred_bytes, status, direction, timestamp FROM transfers WHERE id = :id"));
+    q.prepare(QStringLiteral(
+        "SELECT id, message_id, file_name, file_path, file_size, sha256, transferred_bytes, "
+        "status, direction, timestamp FROM transfers WHERE id = :id"));
     q.bindValue(":id", transferId);
 
     if (q.exec() && q.next()) {
@@ -407,10 +443,15 @@ std::optional<StoredTransfer> SqliteMessageStore::getTransfer(const QString& tra
 QList<StoredTransfer> SqliteMessageStore::getAllTransfers() {
     QMutexLocker locker(&m_mutex);
     QList<StoredTransfer> list;
-    if (!m_isOpen) return list;
+    if (!m_isOpen)
+        return list;
 
     QSqlDatabase db = QSqlDatabase::database(m_connectionName);
-    QSqlQuery q(QStringLiteral("SELECT id, message_id, file_name, file_path, file_size, sha256, transferred_bytes, status, direction, timestamp FROM transfers ORDER BY timestamp DESC"), db);
+    QSqlQuery q(
+        QStringLiteral(
+            "SELECT id, message_id, file_name, file_path, file_size, sha256, transferred_bytes, "
+            "status, direction, timestamp FROM transfers ORDER BY timestamp DESC"),
+        db);
     while (q.next()) {
         StoredTransfer t;
         t.id = q.value(0).toString();

@@ -1,9 +1,10 @@
+#include <QCommandLineParser>
 #include <QGuiApplication>
+#include <QIcon>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
-#include <QCommandLineParser>
 #include <QQuickStyle>
-#include <QIcon>
+
 #include "ChatController.hpp"
 
 int main(int argc, char* argv[]) {
@@ -16,7 +17,8 @@ int main(int argc, char* argv[]) {
     QQuickStyle::setStyle(QStringLiteral("Basic"));
 
     QCommandLineParser parser;
-    parser.setApplicationDescription(QStringLiteral("PeerChat - Secure Cross-Platform P2P Messaging"));
+    parser.setApplicationDescription(
+        QStringLiteral("PeerChat - Secure Cross-Platform P2P Messaging"));
     parser.addHelpOption();
     parser.addVersionOption();
 
@@ -25,8 +27,7 @@ int main(int argc, char* argv[]) {
                                      QStringLiteral("name"));
     parser.addOption(profileOption);
 
-    QCommandLineOption portOption(QStringList() << "port",
-                                  QStringLiteral("TCP listen port"),
+    QCommandLineOption portOption(QStringList() << "port", QStringLiteral("TCP listen port"),
                                   QStringLiteral("port"));
     parser.addOption(portOption);
 
@@ -51,11 +52,13 @@ int main(int argc, char* argv[]) {
     engine.rootContext()->setContextProperty(QStringLiteral("chatController"), controller);
 
     const QUrl url(QStringLiteral("qrc:/peerchat/qml/Main.qml"));
-    QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
-                     &app, [url](QObject *obj, const QUrl &objUrl) {
-        if (!obj && url == objUrl)
-            QCoreApplication::exit(-1);
-    }, Qt::QueuedConnection);
+    QObject::connect(
+        &engine, &QQmlApplicationEngine::objectCreated, &app,
+        [url](QObject* obj, const QUrl& objUrl) {
+            if (!obj && url == objUrl)
+                QCoreApplication::exit(-1);
+        },
+        Qt::QueuedConnection);
 
     engine.load(url);
 

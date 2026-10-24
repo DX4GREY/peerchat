@@ -1,14 +1,16 @@
 #include "RelayServer.hpp"
-#include "../../core/identity/IIdentityProvider.hpp"
-#include "../../core/crypto/CryptoUtils.hpp"
 
+#include <QHostAddress>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QHostAddress>
+
+#include "../../core/crypto/CryptoUtils.hpp"
+#include "../../core/identity/IIdentityProvider.hpp"
 
 namespace peerchat::relay {
 
-RelayServer::RelayServer(quint16 port, const QString& authToken, int maxClients, int maxPacketsPerSec, QObject* parent)
+RelayServer::RelayServer(quint16 port, const QString& authToken, int maxClients,
+                         int maxPacketsPerSec, QObject* parent)
     : QObject(parent),
       m_port(port),
       m_authToken(authToken),
@@ -55,17 +57,21 @@ void RelayServer::onNewConnection() {
         }
 
         auto* framed = new networking::FramedSocket(raw, this);
-        connect(framed, &networking::FramedSocket::frameReceived, this, &RelayServer::onFrameReceived);
-        connect(framed, &networking::FramedSocket::disconnected, this, &RelayServer::onSocketDisconnected);
+        connect(framed, &networking::FramedSocket::frameReceived, this,
+                &RelayServer::onFrameReceived);
+        connect(framed, &networking::FramedSocket::disconnected, this,
+                &RelayServer::onSocketDisconnected);
     }
 }
 
 void RelayServer::onFrameReceived(const QByteArray& frame) {
     auto* framed = qobject_cast<networking::FramedSocket*>(sender());
-    if (!framed) return;
+    if (!framed)
+        return;
 
     QJsonDocument doc = QJsonDocument::fromJson(frame);
-    if (!doc.isObject()) return;
+    if (!doc.isObject())
+        return;
 
     QJsonObject obj = doc.object();
     if (obj.value("proto").toString() != QLatin1String("peerchat/relay/1.0")) {
@@ -93,7 +99,8 @@ void RelayServer::handleRegister(networking::FramedSocket* framed, const QJsonOb
     // Authenticate signature if provided
     qint64 timestamp = obj.value("timestamp").toInteger();
     QByteArray signature = QByteArray::fromHex(obj.value("signature").toString().toUtf8());
-    QByteArray dataToVerify = peerId.toUtf8() + ":" + QByteArray::number(timestamp) + ":" + token.toUtf8();
+    QByteArray dataToVerify =
+        peerId.toUtf8() + ":" + QByteArray::number(timestamp) + ":" + token.toUtf8();
     QByteArray pubKey = identity::IIdentityProvider::extractPublicKey(peerId);
 
     if (pubKey.isEmpty() || !crypto::CryptoUtils::verify(dataToVerify, signature, pubKey)) {
@@ -128,21 +135,21 @@ void RelayServer::handleRegister(networking::FramedSocket* framed, const QJsonOb
 
 void RelayServer::handleForward(networking::FramedSocket* framed, const QJsonObject& obj) {
     if (!m_socketMap.contains(framed)) {
-        return; // Unauthenticated
+        return;  // Unauthenticated
     }
 
     QString senderPeerId = m_socketMap.value(framed);
     auto& session = m_sessions[senderPeerId];
 
     if (!checkRateLimit(session)) {
-        return; // Dropped by rate limiter
+        return;  // Dropped by rate limiter
     }
 
     QString targetPeerId = obj.value("target_peer_id").toString();
     QString b64Payload = obj.value("payload").toString();
 
     if (!m_sessions.contains(targetPeerId)) {
-        return; // Target not connected to this relay
+        return;  // Target not connected to this relay
     }
 
     auto& targetSession = m_sessions[targetPeerId];
@@ -173,7 +180,8 @@ bool RelayServer::checkRateLimit(ClientSession& session) {
 
 void RelayServer::onSocketDisconnected() {
     auto* framed = qobject_cast<networking::FramedSocket*>(sender());
-    if (!framed) return;
+    if (!framed)
+        return;
 
     if (m_socketMap.contains(framed)) {
         QString peerId = m_socketMap.take(framed);

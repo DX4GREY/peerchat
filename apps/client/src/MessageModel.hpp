@@ -2,6 +2,7 @@
 
 #include <QAbstractListModel>
 #include <QDateTime>
+
 #include "../../core/storage/IMessageStore.hpp"
 
 namespace peerchat::client {

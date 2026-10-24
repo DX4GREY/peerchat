@@ -56,7 +56,7 @@ void RelayTransport::stopListening() {
 }
 
 quint16 RelayTransport::listeningPort() const {
-    return 0; // Relay client has no local listening port
+    return 0;  // Relay client has no local listening port
 }
 
 void RelayTransport::connectToPeer(const QString& peerId, const QString& host, quint16 port) {
@@ -122,7 +122,8 @@ void RelayTransport::onRelayDisconnected() {
 }
 
 void RelayTransport::registerWithRelay() {
-    if (!m_identityProvider) return;
+    if (!m_identityProvider)
+        return;
 
     QJsonObject obj;
     obj["proto"] = QStringLiteral("peerchat/relay/1.0");
@@ -142,7 +143,8 @@ void RelayTransport::registerWithRelay() {
 
 void RelayTransport::onRelayFrameReceived(const QByteArray& frame) {
     QJsonDocument doc = QJsonDocument::fromJson(frame);
-    if (!doc.isObject()) return;
+    if (!doc.isObject())
+        return;
 
     QJsonObject obj = doc.object();
     QString action = obj.value("action").toString();

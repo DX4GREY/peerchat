@@ -1,11 +1,12 @@
 #pragma once
 
-#include <QObject>
-#include <QTcpServer>
+#include <QDateTime>
 #include <QMap>
+#include <QObject>
 #include <QSet>
 #include <QString>
-#include <QDateTime>
+#include <QTcpServer>
+
 #include "../../core/networking/FramedSocket.hpp"
 
 namespace peerchat::relay {
@@ -21,10 +22,8 @@ struct ClientSession {
 class RelayServer : public QObject {
     Q_OBJECT
 public:
-    explicit RelayServer(quint16 port = 42424,
-                         const QString& authToken = QString(),
-                         int maxClients = 500,
-                         int maxPacketsPerSec = 50,
+    explicit RelayServer(quint16 port = 42424, const QString& authToken = QString(),
+                         int maxClients = 500, int maxPacketsPerSec = 50,
                          QObject* parent = nullptr);
     ~RelayServer() override;
 
@@ -49,8 +48,8 @@ private:
     int m_maxPacketsPerSec;
 
     QTcpServer* m_server{nullptr};
-    QMap<QString, ClientSession> m_sessions;              // peerId -> ClientSession
-    QMap<networking::FramedSocket*, QString> m_socketMap; // FramedSocket -> peerId
+    QMap<QString, ClientSession> m_sessions;               // peerId -> ClientSession
+    QMap<networking::FramedSocket*, QString> m_socketMap;  // FramedSocket -> peerId
 };
 
 }  // namespace peerchat::relay

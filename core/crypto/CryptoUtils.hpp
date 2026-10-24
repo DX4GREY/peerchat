@@ -2,6 +2,7 @@
 
 #include <QByteArray>
 #include <QString>
+
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -29,7 +30,8 @@ public:
 
     // Sign and verify with Ed25519
     static QByteArray sign(const QByteArray& message, const QByteArray& secretKey);
-    static bool verify(const QByteArray& message, const QByteArray& signature, const QByteArray& publicKey);
+    static bool verify(const QByteArray& message, const QByteArray& signature,
+                       const QByteArray& publicKey);
 
     // Convert Ed25519 public key to X25519 for diffie-hellman key exchange
     static std::optional<QByteArray> ed25519PkToCurve25519(const QByteArray& ed25519Pk);
@@ -37,8 +39,10 @@ public:
 
     // Authenticated symmetric encryption (ChaCha20-Poly1305)
     // Nonce must be 24 bytes (XChaCha20) or 12 bytes
-    static QByteArray encrypt(const QByteArray& plaintext, const QByteArray& key, const QByteArray& nonce);
-    static std::optional<QByteArray> decrypt(const QByteArray& ciphertext, const QByteArray& key, const QByteArray& nonce);
+    static QByteArray encrypt(const QByteArray& plaintext, const QByteArray& key,
+                              const QByteArray& nonce);
+    static std::optional<QByteArray> decrypt(const QByteArray& ciphertext, const QByteArray& key,
+                                             const QByteArray& nonce);
 
     // Encodings
     static QString toHex(const QByteArray& data);

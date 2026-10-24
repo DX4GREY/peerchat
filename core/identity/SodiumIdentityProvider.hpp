@@ -1,7 +1,7 @@
 #pragma once
 
-#include "IIdentityProvider.hpp"
 #include "../crypto/CryptoUtils.hpp"
+#include "IIdentityProvider.hpp"
 
 namespace peerchat::identity {
 
@@ -11,7 +11,8 @@ public:
     explicit SodiumIdentityProvider(QObject* parent = nullptr);
     ~SodiumIdentityProvider() override;
 
-    bool loadOrCreate(const QString& keyStoragePath, const QString& displayName = QString()) override;
+    bool loadOrCreate(const QString& keyStoragePath,
+                      const QString& displayName = QString()) override;
 
     QString peerId() const override;
     QString displayName() const override;
@@ -21,7 +22,8 @@ public:
     QByteArray secretKey() const override;
 
     QByteArray sign(const QByteArray& data) const override;
-    bool verifyPeerSignature(const QString& peerId, const QByteArray& data, const QByteArray& signature) const override;
+    bool verifyPeerSignature(const QString& peerId, const QByteArray& data,
+                             const QByteArray& signature) const override;
 
 private:
     QString m_keyPath;

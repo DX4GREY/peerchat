@@ -1,19 +1,20 @@
 #pragma once
 
-#include "IPeerTransport.hpp"
-#include "FramedSocket.hpp"
-#include "../identity/IIdentityProvider.hpp"
-
-#include <QTcpSocket>
-#include <QSet>
 #include <QMap>
+#include <QSet>
+#include <QTcpSocket>
+
+#include "../identity/IIdentityProvider.hpp"
+#include "FramedSocket.hpp"
+#include "IPeerTransport.hpp"
 
 namespace peerchat::networking {
 
 class RelayTransport : public IPeerTransport {
     Q_OBJECT
 public:
-    explicit RelayTransport(identity::IIdentityProvider* identityProvider, QObject* parent = nullptr);
+    explicit RelayTransport(identity::IIdentityProvider* identityProvider,
+                            QObject* parent = nullptr);
     ~RelayTransport() override;
 
     bool startListening(quint16 port = 0) override;

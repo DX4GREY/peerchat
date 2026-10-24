@@ -1,27 +1,26 @@
 #pragma once
 
-#include "IFileTransfer.hpp"
-#include "../networking/IPeerTransport.hpp"
-#include "../storage/IMessageStore.hpp"
-#include "../identity/IIdentityProvider.hpp"
-#include "../messaging/ProtocolMessage.hpp"
-
 #include <QFile>
 #include <QMap>
 #include <QTimer>
+
 #include <memory>
+
+#include "../identity/IIdentityProvider.hpp"
+#include "../messaging/ProtocolMessage.hpp"
+#include "../networking/IPeerTransport.hpp"
+#include "../storage/IMessageStore.hpp"
+#include "IFileTransfer.hpp"
 
 namespace peerchat::transfers {
 
 class FileTransferManager : public IFileTransfer {
     Q_OBJECT
 public:
-    static constexpr qint64 CHUNK_SIZE = 64 * 1024; // 64 KB chunks
+    static constexpr qint64 CHUNK_SIZE = 64 * 1024;  // 64 KB chunks
 
-    FileTransferManager(networking::IPeerTransport* transport,
-                        storage::IMessageStore* store,
-                        identity::IIdentityProvider* identityProvider,
-                        const QString& downloadDir,
+    FileTransferManager(networking::IPeerTransport* transport, storage::IMessageStore* store,
+                        identity::IIdentityProvider* identityProvider, const QString& downloadDir,
                         QObject* parent = nullptr);
     ~FileTransferManager() override;
 

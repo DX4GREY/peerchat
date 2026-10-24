@@ -1,14 +1,14 @@
 #pragma once
 
+#include <QObject>
+#include <QSet>
+
+#include "../discovery/IPeerDiscovery.hpp"
 #include "../identity/IIdentityProvider.hpp"
 #include "../networking/IPeerTransport.hpp"
-#include "../discovery/IPeerDiscovery.hpp"
 #include "../storage/IMessageStore.hpp"
 #include "../transfers/IFileTransfer.hpp"
 #include "ProtocolMessage.hpp"
-
-#include <QObject>
-#include <QSet>
 
 namespace peerchat::messaging {
 
@@ -16,12 +16,10 @@ class MessagingEngine : public QObject {
     Q_OBJECT
 public:
     explicit MessagingEngine(identity::IIdentityProvider* identityProvider,
-                            networking::IPeerTransport* directTransport,
-                            networking::IPeerTransport* relayTransport,
-                            discovery::IPeerDiscovery* discovery,
-                            storage::IMessageStore* store,
-                            transfers::IFileTransfer* transferManager,
-                            QObject* parent = nullptr);
+                             networking::IPeerTransport* directTransport,
+                             networking::IPeerTransport* relayTransport,
+                             discovery::IPeerDiscovery* discovery, storage::IMessageStore* store,
+                             transfers::IFileTransfer* transferManager, QObject* parent = nullptr);
     ~MessagingEngine() override;
 
     bool initialize(const QString& dataDir, const QString& profileName = QString());
@@ -31,7 +29,8 @@ public:
     QString sendFile(const QString& recipientPeerId, const QString& filePath);
 
     // Contacts
-    bool addOrUpdateContact(const QString& peerId, const QString& displayName, const QString& trustLevel = QStringLiteral("untrusted"));
+    bool addOrUpdateContact(const QString& peerId, const QString& displayName,
+                            const QString& trustLevel = QStringLiteral("untrusted"));
     QList<storage::Contact> getContacts() const;
 
     // Route & Connection query
@@ -41,7 +40,8 @@ public:
 signals:
     void messageReceived(const storage::StoredMessage& message);
     void messageDelivered(const QString& messageId, qint64 deliveredAt);
-    void contactDiscovered(const QString& peerId, const QString& displayName, const QString& host, quint16 port);
+    void contactDiscovered(const QString& peerId, const QString& displayName, const QString& host,
+                           quint16 port);
     void peerRouteChanged(const QString& peerId, const QString& routeString);
 
 private slots:

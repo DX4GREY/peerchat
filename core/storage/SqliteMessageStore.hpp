@@ -1,8 +1,9 @@
 #pragma once
 
-#include "IMessageStore.hpp"
-#include <QSqlDatabase>
 #include <QRecursiveMutex>
+#include <QSqlDatabase>
+
+#include "IMessageStore.hpp"
 
 namespace peerchat::storage {
 
@@ -23,13 +24,16 @@ public:
 
     // Messages
     bool saveMessage(const StoredMessage& message) override;
-    bool updateMessageStatus(const QString& messageId, MessageStatus status, qint64 deliveredAt = 0) override;
+    bool updateMessageStatus(const QString& messageId, MessageStatus status,
+                             qint64 deliveredAt = 0) override;
     std::optional<StoredMessage> getMessage(const QString& messageId) override;
-    QList<StoredMessage> getMessagesForConversation(const QString& conversationId, int limit = 50, int offset = 0) override;
+    QList<StoredMessage> getMessagesForConversation(const QString& conversationId, int limit = 50,
+                                                    int offset = 0) override;
 
     // Transfers
     bool saveTransfer(const StoredTransfer& transfer) override;
-    bool updateTransferProgress(const QString& transferId, qint64 transferredBytes, const QString& status) override;
+    bool updateTransferProgress(const QString& transferId, qint64 transferredBytes,
+                                const QString& status) override;
     std::optional<StoredTransfer> getTransfer(const QString& transferId) override;
     QList<StoredTransfer> getAllTransfers() override;
 

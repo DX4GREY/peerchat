@@ -6,12 +6,7 @@
 
 namespace peerchat::networking {
 
-enum class RouteType {
-    Direct,
-    Relay,
-    Connecting,
-    Offline
-};
+enum class RouteType { Direct, Relay, Connecting, Offline };
 
 QString routeTypeToString(RouteType route);
 RouteType stringToRouteType(const QString& str);

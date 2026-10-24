@@ -5,7 +5,8 @@ namespace peerchat::client {
 TransferModel::TransferModel(QObject* parent) : QAbstractListModel(parent) {}
 
 int TransferModel::rowCount(const QModelIndex& parent) const {
-    if (parent.isValid()) return 0;
+    if (parent.isValid())
+        return 0;
     return static_cast<int>(m_transfers.size());
 }
 
@@ -16,14 +17,22 @@ QVariant TransferModel::data(const QModelIndex& index, int role) const {
 
     const TransferListItem& item = m_transfers.at(index.row());
     switch (role) {
-        case TransferIdRole: return item.transferId;
-        case FileNameRole: return item.fileName;
-        case FilePathRole: return item.filePath;
-        case ProgressRole: return item.progress;
-        case StatusRole: return item.status;
-        case IsOutgoingRole: return item.isOutgoing;
-        case SizeStrRole: return item.sizeStr;
-        default: return QVariant();
+        case TransferIdRole:
+            return item.transferId;
+        case FileNameRole:
+            return item.fileName;
+        case FilePathRole:
+            return item.filePath;
+        case ProgressRole:
+            return item.progress;
+        case StatusRole:
+            return item.status;
+        case IsOutgoingRole:
+            return item.isOutgoing;
+        case SizeStrRole:
+            return item.sizeStr;
+        default:
+            return QVariant();
     }
 }
 
@@ -48,7 +57,8 @@ void TransferModel::updateTransfer(const TransferListItem& item) {
         }
     }
 
-    beginInsertRows(QModelIndex(), static_cast<int>(m_transfers.size()), static_cast<int>(m_transfers.size()));
+    beginInsertRows(QModelIndex(), static_cast<int>(m_transfers.size()),
+                    static_cast<int>(m_transfers.size()));
     m_transfers.append(item);
     endInsertRows();
 }

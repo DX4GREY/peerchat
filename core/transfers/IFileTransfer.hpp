@@ -5,14 +5,7 @@
 
 namespace peerchat::transfers {
 
-enum class TransferState {
-    Pending,
-    Active,
-    Paused,
-    Completed,
-    Failed,
-    Cancelled
-};
+enum class TransferState { Pending, Active, Paused, Completed, Failed, Cancelled };
 
 QString transferStateToString(TransferState state);
 TransferState stringToTransferState(const QString& str);

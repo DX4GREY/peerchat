@@ -1,8 +1,9 @@
-#include <gtest/gtest.h>
-#include <QTemporaryDir>
 #include <QFile>
-#include "../../core/identity/SodiumIdentityProvider.hpp"
+#include <QTemporaryDir>
+
 #include "../../core/crypto/CryptoUtils.hpp"
+#include "../../core/identity/SodiumIdentityProvider.hpp"
+#include <gtest/gtest.h>
 
 using namespace peerchat;
 
@@ -18,7 +19,7 @@ TEST(IdentityTest, KeyPairGenerationAndPeerId) {
 
     QString peerId = provider.peerId();
     EXPECT_TRUE(peerId.startsWith("peer:ed25519:"));
-    EXPECT_EQ(peerId.length(), 13 + 64); // "peer:ed25519:" + 64 hex chars
+    EXPECT_EQ(peerId.length(), 13 + 64);  // "peer:ed25519:" + 64 hex chars
     EXPECT_EQ(provider.displayName(), "Alice");
 
     QByteArray extractedPk = identity::IIdentityProvider::extractPublicKey(peerId);

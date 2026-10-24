@@ -1,14 +1,14 @@
 #pragma once
 
+#include <QMap>
 #include <QObject>
 #include <QString>
-#include <QMap>
 
 namespace peerchat::diagnostics {
 
 struct PeerDiagnostics {
     QString peerId;
-    QString routeType; // "Direct", "Relay", "Connecting", "Offline"
+    QString routeType;  // "Direct", "Relay", "Connecting", "Offline"
     qint64 bytesSent{0};
     qint64 bytesReceived{0};
     qint64 connectedSince{0};

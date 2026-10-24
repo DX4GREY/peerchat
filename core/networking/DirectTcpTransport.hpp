@@ -1,19 +1,20 @@
 #pragma once
 
-#include "IPeerTransport.hpp"
-#include "FramedSocket.hpp"
-#include "../identity/IIdentityProvider.hpp"
-
-#include <QTcpServer>
 #include <QMap>
 #include <QSet>
+#include <QTcpServer>
+
+#include "../identity/IIdentityProvider.hpp"
+#include "FramedSocket.hpp"
+#include "IPeerTransport.hpp"
 
 namespace peerchat::networking {
 
 class DirectTcpTransport : public IPeerTransport {
     Q_OBJECT
 public:
-    explicit DirectTcpTransport(identity::IIdentityProvider* identityProvider, QObject* parent = nullptr);
+    explicit DirectTcpTransport(identity::IIdentityProvider* identityProvider,
+                                QObject* parent = nullptr);
     ~DirectTcpTransport() override;
 
     bool startListening(quint16 port = 0) override;
@@ -41,7 +42,7 @@ private:
     QTcpServer* m_server{nullptr};
 
     // Active verified peers
-    QMap<QString, FramedSocket*> m_peerSockets; // peerId -> FramedSocket
+    QMap<QString, FramedSocket*> m_peerSockets;  // peerId -> FramedSocket
     QMap<FramedSocket*, QString> m_socketToPeer;
 
     // Unverified incoming/outgoing sockets undergoing handshake

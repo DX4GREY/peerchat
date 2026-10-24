@@ -41,7 +41,8 @@ bool FramedSocket::sendFrame(const QByteArray& payload) {
 }
 
 void FramedSocket::onReadyRead() {
-    if (!m_socket) return;
+    if (!m_socket)
+        return;
     m_buffer.append(m_socket->readAll());
 
     while (true) {
@@ -56,7 +57,8 @@ void FramedSocket::onReadyRead() {
             m_buffer.remove(0, sizeof(quint32));
 
             if (m_expectedLength > MAX_FRAME_SIZE) {
-                emit errorOccurred(QStringLiteral("Received frame length exceeds maximum allowed limit"));
+                emit errorOccurred(
+                    QStringLiteral("Received frame length exceeds maximum allowed limit"));
                 close();
                 return;
             }

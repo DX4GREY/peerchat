@@ -1,11 +1,12 @@
-#include <gtest/gtest.h>
 #include <QCoreApplication>
 #include <QTemporaryDir>
 #include <QTimer>
+
 #include "../../core/identity/SodiumIdentityProvider.hpp"
-#include "../../core/storage/SqliteMessageStore.hpp"
-#include "../../core/networking/DirectTcpTransport.hpp"
 #include "../../core/messaging/MessagingEngine.hpp"
+#include "../../core/networking/DirectTcpTransport.hpp"
+#include "../../core/storage/SqliteMessageStore.hpp"
+#include <gtest/gtest.h>
 
 using namespace peerchat;
 
@@ -23,7 +24,8 @@ TEST(NetworkingTest, TwoPeersLoopbackConnectAndMessage) {
     quint16 alicePort = transportAlice.listeningPort();
     ASSERT_GT(alicePort, 0);
 
-    messaging::MessagingEngine engineAlice(&idAlice, &transportAlice, nullptr, nullptr, &storeAlice, nullptr);
+    messaging::MessagingEngine engineAlice(&idAlice, &transportAlice, nullptr, nullptr, &storeAlice,
+                                           nullptr);
 
     // Bob
     identity::SodiumIdentityProvider idBob;
@@ -33,21 +35,24 @@ TEST(NetworkingTest, TwoPeersLoopbackConnectAndMessage) {
     networking::DirectTcpTransport transportBob(&idBob);
     ASSERT_TRUE(transportBob.startListening(0));
 
-    messaging::MessagingEngine engineBob(&idBob, &transportBob, nullptr, nullptr, &storeBob, nullptr);
+    messaging::MessagingEngine engineBob(&idBob, &transportBob, nullptr, nullptr, &storeBob,
+                                         nullptr);
 
     bool bobReceivedMessage = false;
     QString receivedContent;
-    QObject::connect(&engineBob, &messaging::MessagingEngine::messageReceived, [&](const storage::StoredMessage& msg) {
-        bobReceivedMessage = true;
-        receivedContent = msg.content;
-    });
+    QObject::connect(&engineBob, &messaging::MessagingEngine::messageReceived,
+                     [&](const storage::StoredMessage& msg) {
+                         bobReceivedMessage = true;
+                         receivedContent = msg.content;
+                     });
 
     bool aliceReceivedAck = false;
-    QObject::connect(&engineAlice, &messaging::MessagingEngine::messageDelivered, [&](const QString& msgId, qint64 time) {
-        Q_UNUSED(msgId);
-        Q_UNUSED(time);
-        aliceReceivedAck = true;
-    });
+    QObject::connect(&engineAlice, &messaging::MessagingEngine::messageDelivered,
+                     [&](const QString& msgId, qint64 time) {
+                         Q_UNUSED(msgId);
+                         Q_UNUSED(time);
+                         aliceReceivedAck = true;
+                     });
 
     // Bob connects to Alice over TCP loopback
     transportBob.connectToPeer(idAlice.peerId(), "127.0.0.1", alicePort);
@@ -62,7 +67,8 @@ TEST(NetworkingTest, TwoPeersLoopbackConnectAndMessage) {
     while (timer.isActive()) {
         qApp->processEvents(QEventLoop::AllEvents, 50);
 
-        if (transportBob.isConnected(idAlice.peerId()) && transportAlice.isConnected(idBob.peerId()) && !messageSent) {
+        if (transportBob.isConnected(idAlice.peerId()) &&
+            transportAlice.isConnected(idBob.peerId()) && !messageSent) {
             engineAlice.sendTextMessage(idBob.peerId(), "Hello from Alice over loopback TCP!");
             messageSent = true;
         }

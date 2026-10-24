@@ -9,37 +9,89 @@ permissions:
   contents: read
 
 jobs:
-  package-desktop:
-    name: Package Desktop (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ ubuntu-24.04, windows-latest ]
-
+  package-linux:
+    name: Package Desktop (Linux x86_64)
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
-      - name: Install Dependencies (Linux)
-        if: runner.os == 'Linux'
+      - name: Install Dependencies
         run: |
           sudo apt update
           sudo apt install -y cmake build-essential \
             ninja-build qt6-base-dev qt6-declarative-dev libsodium-dev libsqlite3-dev
 
       - name: Build Linux Binaries
-        if: runner.os == 'Linux'
         run: |
           cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DPEERCHAT_BUILD_TESTS=OFF
           cmake --build build --config Release
-          mkdir -p dist/bin
-          cp build/apps/client/PeerChat dist/bin/
-          cp build/services/relay/peerchat-relay dist/bin/
-          tar -czvf peerchat-linux-x86_64.tar.gz -C dist/bin .
+
+      - name: Package Linux Distribution
+        run: |
+          bash packaging/linux/build_package.sh build dist/linux
 
       - name: Upload Linux Package
-        if: runner.os == 'Linux'
         uses: actions/upload-artifact@v4
         with:
           name: peerchat-linux-x86_64
-          path: peerchat-linux-x86_64.tar.gz
+          path: |
+            PeerChat-linux-x86_64.tar.gz
+            PeerChat-linux-x86_64.tar.gz.sha256
+
+  package-windows:
+    name: Package Desktop (Windows x64)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Ninja
+        run: choco install ninja -y
+
+      - name: Setup MSVC Developer Environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Install Qt 6
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.6.2'
+          target: 'desktop'
+          arch: 'win64_msvc2022_64'
+
+      - name: Install libsodium (vcpkg)
+        run: |
+          vcpkg install libsodium:x64-windows
+
+      - name: Configure CMake
+        run: |
+          cmake -B build -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" `
+            -DCMAKE_PREFIX_PATH="$env:Qt6_DIR;C:/vcpkg/installed/x64-windows" `
+            -DPEERCHAT_BUILD_TESTS=OFF `
+            -DPEERCHAT_BUILD_CLIENT=ON `
+            -DPEERCHAT_BUILD_RELAY=ON
+
+      - name: Build Release
+        run: cmake --build build --config Release
+
+      - name: Package Windows Distribution
+        run: |
+          powershell -File packaging/windows/package_windows.ps1 -BuildDir build -OutputDir dist/windows -QtBinDir "$env:Qt6_DIR/bin"
+          # Also copy libsodium.dll to dist/windows
+          if (Test-Path "C:/vcpkg/installed/x64-windows/bin/sodium.dll") {
+            Copy-Item "C:/vcpkg/installed/x64-windows/bin/sodium.dll" "dist/windows/"
+            Compress-Archive -Path "dist/windows/*" -DestinationPath "PeerChat-win64.zip" -Force
+            Get-FileHash -Algorithm SHA256 "PeerChat-win64.zip" | Out-File "PeerChat-win64.zip.sha256"
+          }
+
+      - name: Upload Windows Package
+        uses: actions/upload-artifact@v4
+        with:
+          name: peerchat-windows-x64
+          path: |
+            PeerChat-win64.zip
+            PeerChat-win64.zip.sha256

@@ -1,11 +1,11 @@
 #pragma once
 
-#include "IPeerDiscovery.hpp"
-#include "../identity/IIdentityProvider.hpp"
-
-#include <QUdpSocket>
-#include <QTimer>
 #include <QMap>
+#include <QTimer>
+#include <QUdpSocket>
+
+#include "../identity/IIdentityProvider.hpp"
+#include "IPeerDiscovery.hpp"
 
 namespace peerchat::discovery {
 
@@ -15,7 +15,8 @@ public:
     static constexpr quint16 DEFAULT_DISCOVERY_PORT = 4242;
     static const QString MULTICAST_GROUP_IPV4;
 
-    explicit LanDiscovery(identity::IIdentityProvider* identityProvider, quint16 tcpListenPort, QObject* parent = nullptr);
+    explicit LanDiscovery(identity::IIdentityProvider* identityProvider, quint16 tcpListenPort,
+                          QObject* parent = nullptr);
     ~LanDiscovery() override;
 
     bool start() override;

@@ -1,5 +1,4 @@
 #include "FileTransferManager.hpp"
-#include "../crypto/CryptoUtils.hpp"
 
 #include <QCryptographicHash>
 #include <QDateTime>
@@ -9,25 +8,39 @@
 #include <QRegularExpression>
 #include <QUuid>
 
+#include "../crypto/CryptoUtils.hpp"
+
 namespace peerchat::transfers {
 
 QString transferStateToString(TransferState state) {
     switch (state) {
-        case TransferState::Pending: return QStringLiteral("pending");
-        case TransferState::Active: return QStringLiteral("active");
-        case TransferState::Paused: return QStringLiteral("paused");
-        case TransferState::Completed: return QStringLiteral("completed");
-        case TransferState::Failed: return QStringLiteral("failed");
-        case TransferState::Cancelled: default: return QStringLiteral("cancelled");
+        case TransferState::Pending:
+            return QStringLiteral("pending");
+        case TransferState::Active:
+            return QStringLiteral("active");
+        case TransferState::Paused:
+            return QStringLiteral("paused");
+        case TransferState::Completed:
+            return QStringLiteral("completed");
+        case TransferState::Failed:
+            return QStringLiteral("failed");
+        case TransferState::Cancelled:
+        default:
+            return QStringLiteral("cancelled");
     }
 }
 
 TransferState stringToTransferState(const QString& str) {
-    if (str == QLatin1String("pending")) return TransferState::Pending;
-    if (str == QLatin1String("active")) return TransferState::Active;
-    if (str == QLatin1String("paused")) return TransferState::Paused;
-    if (str == QLatin1String("completed")) return TransferState::Completed;
-    if (str == QLatin1String("failed")) return TransferState::Failed;
+    if (str == QLatin1String("pending"))
+        return TransferState::Pending;
+    if (str == QLatin1String("active"))
+        return TransferState::Active;
+    if (str == QLatin1String("paused"))
+        return TransferState::Paused;
+    if (str == QLatin1String("completed"))
+        return TransferState::Completed;
+    if (str == QLatin1String("failed"))
+        return TransferState::Failed;
     return TransferState::Cancelled;
 }
 
@@ -49,8 +62,10 @@ QString IFileTransfer::sanitizeFilename(const QString& rawName) {
     clean = clean.trimmed();
 
     // Guard against relative traversal tokens, empty strings, and pure dot names
-    if (clean.isEmpty() || clean == QLatin1String(".") || clean == QLatin1String("..") || clean.startsWith(QLatin1String(".."))) {
-        clean = QStringLiteral("attachment_") + QUuid::createUuid().toString(QUuid::WithoutBraces).left(8);
+    if (clean.isEmpty() || clean == QLatin1String(".") || clean == QLatin1String("..") ||
+        clean.startsWith(QLatin1String(".."))) {
+        clean = QStringLiteral("attachment_") +
+                QUuid::createUuid().toString(QUuid::WithoutBraces).left(8);
     }
     return clean;
 }
@@ -58,8 +73,7 @@ QString IFileTransfer::sanitizeFilename(const QString& rawName) {
 FileTransferManager::FileTransferManager(networking::IPeerTransport* transport,
                                          storage::IMessageStore* store,
                                          identity::IIdentityProvider* identityProvider,
-                                         const QString& downloadDir,
-                                         QObject* parent)
+                                         const QString& downloadDir, QObject* parent)
     : IFileTransfer(parent),
       m_transport(transport),
       m_store(store),
@@ -71,16 +85,18 @@ FileTransferManager::FileTransferManager(networking::IPeerTransport* transport,
     }
 
     m_outgoingChunkTimer = new QTimer(this);
-    m_outgoingChunkTimer->setInterval(15); // Stream chunks with low latency
+    m_outgoingChunkTimer->setInterval(15);  // Stream chunks with low latency
     connect(m_outgoingChunkTimer, &QTimer::timeout, this, &FileTransferManager::sendNextChunks);
 }
 
 FileTransferManager::~FileTransferManager() {
     for (auto& out : m_outgoingTransfers) {
-        if (out && out->file && out->file->isOpen()) out->file->close();
+        if (out && out->file && out->file->isOpen())
+            out->file->close();
     }
     for (auto& in : m_incomingTransfers) {
-        if (in && in->partFile && in->partFile->isOpen()) in->partFile->close();
+        if (in && in->partFile && in->partFile->isOpen())
+            in->partFile->close();
     }
 }
 
@@ -96,7 +112,8 @@ QString FileTransferManager::downloadDirectory() const {
     return m_downloadDir;
 }
 
-QString FileTransferManager::resolveUniqueFilePath(const QString& directory, const QString& filename) {
+QString FileTransferManager::resolveUniqueFilePath(const QString& directory,
+                                                   const QString& filename) {
     QDir dir(directory);
     QString fullPath = dir.filePath(filename);
     if (!QFile::exists(fullPath)) {
@@ -106,7 +123,8 @@ QString FileTransferManager::resolveUniqueFilePath(const QString& directory, con
     QFileInfo fi(filename);
     QString base = fi.completeBaseName();
     QString suffix = fi.suffix();
-    if (!suffix.isEmpty()) suffix = QStringLiteral(".") + suffix;
+    if (!suffix.isEmpty())
+        suffix = QStringLiteral(".") + suffix;
 
     int counter = 1;
     while (true) {
@@ -148,7 +166,8 @@ QString FileTransferManager::startSendFile(const QString& peerId, const QString&
     QMimeDatabase mimeDb;
     QString mime = mimeDb.mimeTypeForFile(localFilePath).name();
 
-    int totalChunks = (fileSize == 0) ? 1 : static_cast<int>((fileSize + CHUNK_SIZE - 1) / CHUNK_SIZE);
+    int totalChunks =
+        (fileSize == 0) ? 1 : static_cast<int>((fileSize + CHUNK_SIZE - 1) / CHUNK_SIZE);
 
     TransferInfo info;
     info.transferId = transferId;
@@ -232,7 +251,8 @@ bool FileTransferManager::acceptFileOffer(const QString& transferId) {
     in->partFile = std::make_unique<QFile>(partPath);
 
     if (!in->partFile->open(QIODevice::ReadWrite | QIODevice::Truncate)) {
-        emit transferFailed(transferId, QStringLiteral("Cannot open destination temporary file for writing"));
+        emit transferFailed(transferId,
+                            QStringLiteral("Cannot open destination temporary file for writing"));
         return false;
     }
 
@@ -306,7 +326,8 @@ void FileTransferManager::cancelTransfer(const QString& transferId) {
     if (m_outgoingTransfers.contains(transferId)) {
         auto out = m_outgoingTransfers.take(transferId);
         peerId = out->info.peerId;
-        if (out->file && out->file->isOpen()) out->file->close();
+        if (out->file && out->file->isOpen())
+            out->file->close();
     } else if (m_incomingTransfers.contains(transferId)) {
         auto in = m_incomingTransfers.take(transferId);
         peerId = in->info.peerId;
@@ -372,11 +393,13 @@ void FileTransferManager::sendNextChunks() {
         hasActive = true;
         if (out->nextChunkIndex >= out->info.totalChunks) {
             // Done sending all chunks
-            if (out->file && out->file->isOpen()) out->file->close();
+            if (out->file && out->file->isOpen())
+                out->file->close();
             out->info.state = TransferState::Completed;
             emit transferCompleted(out->info.transferId, out->info.filePath);
             if (m_store) {
-                m_store->updateTransferProgress(out->info.transferId, out->info.fileSize, QStringLiteral("completed"));
+                m_store->updateTransferProgress(out->info.transferId, out->info.fileSize,
+                                                QStringLiteral("completed"));
             }
             continue;
         }
@@ -407,7 +430,8 @@ void FileTransferManager::sendNextChunks() {
         emit transferProgress(out->info.transferId, out->info.transferredBytes, out->info.fileSize);
 
         if (m_store) {
-            m_store->updateTransferProgress(out->info.transferId, out->info.transferredBytes, QStringLiteral("active"));
+            m_store->updateTransferProgress(out->info.transferId, out->info.transferredBytes,
+                                            QStringLiteral("active"));
         }
     }
 
@@ -469,10 +493,12 @@ void FileTransferManager::handleProtocolMessage(const messaging::ProtocolMessage
             }
 
             auto in = m_incomingTransfers[transferId];
-            if (in->isPaused) return;
+            if (in->isPaused)
+                return;
 
             int chunkIndex = msg.payload.value("chunk_index").toInt();
-            QByteArray chunkBytes = QByteArray::fromBase64(msg.payload.value("chunk_data").toString().toUtf8());
+            QByteArray chunkBytes =
+                QByteArray::fromBase64(msg.payload.value("chunk_data").toString().toUtf8());
 
             qint64 offset = static_cast<qint64>(chunkIndex) * CHUNK_SIZE;
             in->partFile->seek(offset);
@@ -484,7 +510,8 @@ void FileTransferManager::handleProtocolMessage(const messaging::ProtocolMessage
 
             emit transferProgress(transferId, in->info.transferredBytes, in->info.fileSize);
             if (m_store) {
-                m_store->updateTransferProgress(transferId, in->info.transferredBytes, QStringLiteral("active"));
+                m_store->updateTransferProgress(transferId, in->info.transferredBytes,
+                                                QStringLiteral("active"));
             }
 
             // Check if transfer complete
@@ -500,7 +527,8 @@ void FileTransferManager::handleProtocolMessage(const messaging::ProtocolMessage
 }
 
 void FileTransferManager::finishIncomingTransfer(const QString& transferId) {
-    if (!m_incomingTransfers.contains(transferId)) return;
+    if (!m_incomingTransfers.contains(transferId))
+        return;
 
     auto in = m_incomingTransfers.take(transferId);
     in->partFile->close();
@@ -512,19 +540,22 @@ void FileTransferManager::finishIncomingTransfer(const QString& transferId) {
         char buf[65536];
         while (!verifyFile.atEnd()) {
             qint64 read = verifyFile.read(buf, sizeof(buf));
-            if (read > 0) hash.addData(QByteArrayView(buf, static_cast<qsizetype>(read)));
+            if (read > 0)
+                hash.addData(QByteArrayView(buf, static_cast<qsizetype>(read)));
         }
         verifyFile.close();
     }
 
     QString actualSha256 = QString::fromUtf8(hash.result().toHex());
-    if (in->info.fileSize > 0 && !in->info.sha256.isEmpty() && actualSha256.compare(in->info.sha256, Qt::CaseInsensitive) != 0) {
+    if (in->info.fileSize > 0 && !in->info.sha256.isEmpty() &&
+        actualSha256.compare(in->info.sha256, Qt::CaseInsensitive) != 0) {
         // Integrity mismatch! Delete corrupted .part file
         QFile::remove(in->partFile->fileName());
         if (m_store) {
             m_store->updateTransferProgress(transferId, 0, QStringLiteral("failed"));
         }
-        emit transferFailed(transferId, QStringLiteral("Integrity verification failed: SHA-256 mismatch"));
+        emit transferFailed(transferId,
+                            QStringLiteral("Integrity verification failed: SHA-256 mismatch"));
         return;
     }
 

@@ -3,6 +3,7 @@
 #include <QByteArray>
 #include <QObject>
 #include <QTcpSocket>
+
 #include <cstdint>
 
 namespace peerchat::networking {
@@ -10,7 +11,7 @@ namespace peerchat::networking {
 class FramedSocket : public QObject {
     Q_OBJECT
 public:
-    static constexpr quint32 MAX_FRAME_SIZE = 10 * 1024 * 1024; // 10 MB limit
+    static constexpr quint32 MAX_FRAME_SIZE = 10 * 1024 * 1024;  // 10 MB limit
 
     explicit FramedSocket(QTcpSocket* socket, QObject* parent = nullptr);
     ~FramedSocket() override;

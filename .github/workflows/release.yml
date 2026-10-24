@@ -9,34 +9,195 @@ permissions:
   contents: write
 
 jobs:
-  release-linux:
-    name: Build & Release Linux Asset
+  build-linux:
+    name: Build Linux Release Package
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Install Dependencies
         run: |
           sudo apt update
-          sudo apt install -y cmake build-essential \
-            ninja-build qt6-base-dev qt6-declarative-dev libsodium-dev libsqlite3-dev
+          sudo apt install -y cmake build-essential ninja-build \
+            qt6-base-dev qt6-declarative-dev libsodium-dev libsqlite3-dev
 
       - name: Build Release
         run: |
           cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DPEERCHAT_BUILD_TESTS=OFF
           cmake --build build --config Release
-          mkdir -p package/bin
-          cp build/apps/client/PeerChat package/bin/
-          cp build/services/relay/peerchat-relay package/bin/
-          tar -czvf peerchat-${{ github.ref_name }}-linux-x86_64.tar.gz -C package/bin .
-          sha256sum peerchat-${{ github.ref_name }}-linux-x86_64.tar.gz > peerchat-${{ github.ref_name }}-linux-x86_64.tar.gz.sha256
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
+      - name: Package Linux Asset
+        run: |
+          mkdir -p release-assets
+          cp build/apps/client/PeerChat release-assets/
+          cp build/services/relay/peerchat-relay release-assets/
+          tar -czvf "PeerChat-${{ github.ref_name }}-linux-x86_64.tar.gz" -C release-assets .
+          sha256sum "PeerChat-${{ github.ref_name }}-linux-x86_64.tar.gz" > "PeerChat-${{ github.ref_name }}-linux-x86_64.tar.gz.sha256"
+
+      - name: Upload Linux Asset to Workflow
+        uses: actions/upload-artifact@v4
         with:
-          files: |
-            peerchat-${{ github.ref_name }}-linux-x86_64.tar.gz
-            peerchat-${{ github.ref_name }}-linux-x86_64.tar.gz.sha256
+          name: release-linux
+          path: |
+            PeerChat-${{ github.ref_name }}-linux-x86_64.tar.gz
+            PeerChat-${{ github.ref_name }}-linux-x86_64.tar.gz.sha256
+
+  build-windows:
+    name: Build Windows Release Package
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Ninja
+        run: choco install ninja -y
+
+      - name: Setup MSVC Developer Environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Install Qt 6
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.6.2'
+          target: 'desktop'
+          arch: 'win64_msvc2022_64'
+
+      - name: Install libsodium (vcpkg)
+        run: |
+          vcpkg install libsodium:x64-windows
+
+      - name: Configure CMake
+        run: |
+          cmake -B build -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" `
+            -DCMAKE_PREFIX_PATH="$env:Qt6_DIR;C:/vcpkg/installed/x64-windows" `
+            -DPEERCHAT_BUILD_TESTS=OFF `
+            -DPEERCHAT_BUILD_CLIENT=ON `
+            -DPEERCHAT_BUILD_RELAY=ON
+
+      - name: Build Release
+        run: cmake --build build --config Release
+
+      - name: Package Windows Asset
+        run: |
+          powershell -File packaging/windows/package_windows.ps1 -BuildDir build -OutputDir dist/windows -QtBinDir "$env:Qt6_DIR/bin"
+          if (Test-Path "C:/vcpkg/installed/x64-windows/bin/sodium.dll") {
+            Copy-Item "C:/vcpkg/installed/x64-windows/bin/sodium.dll" "dist/windows/"
+          }
+          Compress-Archive -Path "dist/windows/*" -DestinationPath "PeerChat-${{ github.ref_name }}-win64.zip" -Force
+          Get-FileHash -Algorithm SHA256 "PeerChat-${{ github.ref_name }}-win64.zip" | Out-File "PeerChat-${{ github.ref_name }}-win64.zip.sha256"
+
+      - name: Upload Windows Asset to Workflow
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-windows
+          path: |
+            PeerChat-${{ github.ref_name }}-win64.zip
+            PeerChat-${{ github.ref_name }}-win64.zip.sha256
+
+  build-android:
+    name: Build Android Release Package
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r25c
+
+      - name: Install Build Tools
+        run: sudo apt-get update && sudo apt-get install -y ninja-build autoconf libtool
+
+      - name: Install Qt 6 Android
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.6.2'
+          target: 'android'
+          arch: 'android_arm64_v8a'
+
+      - name: Cross-Compile libsodium for Android ARM64
+        run: |
+          git clone --depth 1 -b stable https://github.com/jedisct1/libsodium.git
+          cd libsodium
+          export ANDROID_NDK_HOME=${ANDROID_NDK_ROOT}
+          ./dist-build/android-armv8-a.sh
+          echo "LIBSODIUM_DIR=$(pwd)/libsodium-android-armv8-a" >> $GITHUB_ENV
+
+      - name: Configure CMake for Android
+        run: |
+          cmake -B build-android -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK_ROOT}/build/cmake/android.toolchain.cmake \
+            -DANDROID_ABI=arm64-v8a \
+            -DANDROID_PLATFORM=android-26 \
+            -DCMAKE_PREFIX_PATH="${Qt6_DIR};${{ env.LIBSODIUM_DIR }}" \
+            -DLIBSODIUM_INCLUDE_DIR="${{ env.LIBSODIUM_DIR }}/include" \
+            -DLIBSODIUM_LIBRARY="${{ env.LIBSODIUM_DIR }}/lib/libsodium.a" \
+            -DPEERCHAT_BUILD_TESTS=OFF \
+            -DPEERCHAT_BUILD_RELAY=OFF
+
+      - name: Build Android Targets
+        run: |
+          cmake --build build-android
+
+      - name: Package Android Artifact
+        run: |
+          mkdir -p dist/android
+          find build-android -name "*.apk" -exec cp {} "dist/android/PeerChat-${{ github.ref_name }}-debug.apk" \; || true
+          if [ -f "dist/android/PeerChat-${{ github.ref_name }}-debug.apk" ]; then
+            cd dist/android
+            sha256sum "PeerChat-${{ github.ref_name }}-debug.apk" > "PeerChat-${{ github.ref_name }}-debug.apk.sha256"
+          fi
+
+      - name: Upload Android Asset to Workflow
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-android
+          path: dist/android/
+
+  publish-release:
+    name: Publish Official GitHub Release
+    needs: [build-linux, build-windows, build-android]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download Linux Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-linux
+          path: release-files
+
+      - name: Download Windows Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-windows
+          path: release-files
+
+      - name: Download Android Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-android
+          path: release-files
+        continue-on-error: true
+
+      - name: List Release Files
+        run: ls -la release-files/
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-files/*
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

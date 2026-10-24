@@ -1,8 +1,10 @@
 #include "CryptoUtils.hpp"
 
 #include <QCryptographicHash>
-#include <sodium.h>
+
 #include <mutex>
+
+#include <sodium.h>
 
 namespace peerchat::crypto {
 
@@ -39,10 +41,8 @@ CryptoUtils::KeyPair CryptoUtils::generateEd25519KeyPair() {
     kp.publicKey.resize(crypto_sign_ed25519_PUBLICKEYBYTES);
     kp.secretKey.resize(crypto_sign_ed25519_SECRETKEYBYTES);
 
-    crypto_sign_ed25519_keypair(
-        reinterpret_cast<unsigned char*>(kp.publicKey.data()),
-        reinterpret_cast<unsigned char*>(kp.secretKey.data())
-    );
+    crypto_sign_ed25519_keypair(reinterpret_cast<unsigned char*>(kp.publicKey.data()),
+                                reinterpret_cast<unsigned char*>(kp.secretKey.data()));
     return kp;
 }
 
@@ -54,20 +54,19 @@ QByteArray CryptoUtils::sign(const QByteArray& message, const QByteArray& secret
 
     QByteArray signature(crypto_sign_ed25519_BYTES, 0);
     unsigned long long sig_len = 0;
-    crypto_sign_ed25519_detached(
-        reinterpret_cast<unsigned char*>(signature.data()),
-        &sig_len,
-        reinterpret_cast<const unsigned char*>(message.constData()),
-        static_cast<unsigned long long>(message.size()),
-        reinterpret_cast<const unsigned char*>(secretKey.constData())
-    );
+    crypto_sign_ed25519_detached(reinterpret_cast<unsigned char*>(signature.data()), &sig_len,
+                                 reinterpret_cast<const unsigned char*>(message.constData()),
+                                 static_cast<unsigned long long>(message.size()),
+                                 reinterpret_cast<const unsigned char*>(secretKey.constData()));
     signature.resize(static_cast<qsizetype>(sig_len));
     return signature;
 }
 
-bool CryptoUtils::verify(const QByteArray& message, const QByteArray& signature, const QByteArray& publicKey) {
+bool CryptoUtils::verify(const QByteArray& message, const QByteArray& signature,
+                         const QByteArray& publicKey) {
     initialize();
-    if (publicKey.size() != crypto_sign_ed25519_PUBLICKEYBYTES || signature.size() != crypto_sign_ed25519_BYTES) {
+    if (publicKey.size() != crypto_sign_ed25519_PUBLICKEYBYTES ||
+        signature.size() != crypto_sign_ed25519_BYTES) {
         return false;
     }
 
@@ -75,8 +74,7 @@ bool CryptoUtils::verify(const QByteArray& message, const QByteArray& signature,
         reinterpret_cast<const unsigned char*>(signature.constData()),
         reinterpret_cast<const unsigned char*>(message.constData()),
         static_cast<unsigned long long>(message.size()),
-        reinterpret_cast<const unsigned char*>(publicKey.constData())
-    );
+        reinterpret_cast<const unsigned char*>(publicKey.constData()));
     return (ret == 0);
 }
 
@@ -110,7 +108,8 @@ std::optional<QByteArray> CryptoUtils::ed25519SkToCurve25519(const QByteArray& e
     return curveSk;
 }
 
-QByteArray CryptoUtils::encrypt(const QByteArray& plaintext, const QByteArray& key, const QByteArray& nonce) {
+QByteArray CryptoUtils::encrypt(const QByteArray& plaintext, const QByteArray& key,
+                                const QByteArray& nonce) {
     initialize();
     if (key.size() != crypto_aead_xchacha20poly1305_ietf_KEYBYTES ||
         nonce.size() != crypto_aead_xchacha20poly1305_ietf_NPUBBYTES) {
@@ -121,20 +120,18 @@ QByteArray CryptoUtils::encrypt(const QByteArray& plaintext, const QByteArray& k
     unsigned long long clen = 0;
 
     crypto_aead_xchacha20poly1305_ietf_encrypt(
-        reinterpret_cast<unsigned char*>(ciphertext.data()),
-        &clen,
+        reinterpret_cast<unsigned char*>(ciphertext.data()), &clen,
         reinterpret_cast<const unsigned char*>(plaintext.constData()),
-        static_cast<unsigned long long>(plaintext.size()),
-        nullptr, 0, // no additional authenticated data
-        nullptr,
-        reinterpret_cast<const unsigned char*>(nonce.constData()),
-        reinterpret_cast<const unsigned char*>(key.constData())
-    );
+        static_cast<unsigned long long>(plaintext.size()), nullptr,
+        0,  // no additional authenticated data
+        nullptr, reinterpret_cast<const unsigned char*>(nonce.constData()),
+        reinterpret_cast<const unsigned char*>(key.constData()));
     ciphertext.resize(static_cast<qsizetype>(clen));
     return ciphertext;
 }
 
-std::optional<QByteArray> CryptoUtils::decrypt(const QByteArray& ciphertext, const QByteArray& key, const QByteArray& nonce) {
+std::optional<QByteArray> CryptoUtils::decrypt(const QByteArray& ciphertext, const QByteArray& key,
+                                               const QByteArray& nonce) {
     initialize();
     if (key.size() != crypto_aead_xchacha20poly1305_ietf_KEYBYTES ||
         nonce.size() != crypto_aead_xchacha20poly1305_ietf_NPUBBYTES ||
@@ -146,12 +143,9 @@ std::optional<QByteArray> CryptoUtils::decrypt(const QByteArray& ciphertext, con
     unsigned long long mlen = 0;
 
     if (crypto_aead_xchacha20poly1305_ietf_decrypt(
-            reinterpret_cast<unsigned char*>(decrypted.data()),
-            &mlen,
-            nullptr,
+            reinterpret_cast<unsigned char*>(decrypted.data()), &mlen, nullptr,
             reinterpret_cast<const unsigned char*>(ciphertext.constData()),
-            static_cast<unsigned long long>(ciphertext.size()),
-            nullptr, 0,
+            static_cast<unsigned long long>(ciphertext.size()), nullptr, 0,
             reinterpret_cast<const unsigned char*>(nonce.constData()),
             reinterpret_cast<const unsigned char*>(key.constData())) != 0) {
         return std::nullopt;

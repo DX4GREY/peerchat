@@ -1,10 +1,11 @@
-#include <gtest/gtest.h>
-#include <QTemporaryDir>
-#include <QFile>
 #include <QCryptographicHash>
-#include "../../core/transfers/FileTransferManager.hpp"
+#include <QFile>
+#include <QTemporaryDir>
+
 #include "../../core/identity/SodiumIdentityProvider.hpp"
 #include "../../core/storage/SqliteMessageStore.hpp"
+#include "../../core/transfers/FileTransferManager.hpp"
+#include <gtest/gtest.h>
 
 using namespace peerchat;
 
@@ -37,7 +38,9 @@ TEST(TransfersTest, FileOfferAndIntegrityVerification) {
     QString downloadDir = tempDir.filePath("downloads");
     transfers::FileTransferManager ftm(nullptr, &store, &identity, downloadDir);
 
-    QString txId = ftm.startSendFile("peer:ed25519:dummy1234567890123456789012345678901234567890123456789012345678901234", testFilePath);
+    QString txId = ftm.startSendFile(
+        "peer:ed25519:dummy1234567890123456789012345678901234567890123456789012345678901234",
+        testFilePath);
     EXPECT_FALSE(txId.isEmpty());
 
     auto stored = store.getTransfer(txId);
@@ -62,7 +65,9 @@ TEST(TransfersTest, EmptyFileTransferHandling) {
     store.open(tempDir.filePath("store.db"));
 
     transfers::FileTransferManager ftm(nullptr, &store, &identity, tempDir.path());
-    QString txId = ftm.startSendFile("peer:ed25519:dummy1234567890123456789012345678901234567890123456789012345678901234", emptyPath);
+    QString txId = ftm.startSendFile(
+        "peer:ed25519:dummy1234567890123456789012345678901234567890123456789012345678901234",
+        emptyPath);
     EXPECT_FALSE(txId.isEmpty());
 
     auto stored = store.getTransfer(txId);

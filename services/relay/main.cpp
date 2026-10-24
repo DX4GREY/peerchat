@@ -1,6 +1,7 @@
-#include <QCoreApplication>
 #include <QCommandLineParser>
+#include <QCoreApplication>
 #include <QTextStream>
+
 #include "RelayServer.hpp"
 
 int main(int argc, char* argv[]) {
@@ -15,8 +16,7 @@ int main(int argc, char* argv[]) {
 
     QCommandLineOption portOption(QStringList() << "p" << "port",
                                   QStringLiteral("Listening port (default: 42424)"),
-                                  QStringLiteral("port"),
-                                  QStringLiteral("42424"));
+                                  QStringLiteral("port"), QStringLiteral("42424"));
     parser.addOption(portOption);
 
     QCommandLineOption tokenOption(QStringList() << "t" << "auth-token",
@@ -26,8 +26,7 @@ int main(int argc, char* argv[]) {
 
     QCommandLineOption maxClientsOption(QStringList() << "m" << "max-clients",
                                         QStringLiteral("Maximum concurrent peers (default: 500)"),
-                                        QStringLiteral("max"),
-                                        QStringLiteral("500"));
+                                        QStringLiteral("max"), QStringLiteral("500"));
     parser.addOption(maxClientsOption);
 
     parser.process(app);
