@@ -93,7 +93,7 @@ jobs:
           cmake -B build -G Ninja `
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} `
             -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" `
-            -DCMAKE_PREFIX_PATH="$env:Qt6_DIR;C:/vcpkg/installed/x64-windows" `
+            "-DCMAKE_PREFIX_PATH=${{ env.QT_ROOT_DIR }};C:/vcpkg/installed/x64-windows" `
             -DPEERCHAT_BUILD_TESTS=ON `
             -DPEERCHAT_BUILD_CLIENT=ON `
             -DPEERCHAT_BUILD_RELAY=ON
@@ -109,7 +109,7 @@ jobs:
       - name: Run Tests (Windows)
         if: runner.os == 'Windows'
         run: |
-          $env:PATH = "$env:Qt6_DIR/bin;C:/vcpkg/installed/x64-windows/bin;$env:PATH"
+          $env:PATH = "${{ env.QT_ROOT_DIR }}/bin;C:/vcpkg/installed/x64-windows/bin;$env:PATH"
           ctest --test-dir build --output-on-failure -C ${{ matrix.build_type }}
 
       - name: Upload Test Logs on Failure

@@ -80,7 +80,7 @@ jobs:
           cmake -B build -G Ninja `
             -DCMAKE_BUILD_TYPE=Release `
             -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" `
-            -DCMAKE_PREFIX_PATH="$env:Qt6_DIR;C:/vcpkg/installed/x64-windows" `
+            "-DCMAKE_PREFIX_PATH=${{ env.QT_ROOT_DIR }};C:/vcpkg/installed/x64-windows" `
             -DPEERCHAT_BUILD_TESTS=OFF `
             -DPEERCHAT_BUILD_CLIENT=ON `
             -DPEERCHAT_BUILD_RELAY=ON
@@ -90,7 +90,7 @@ jobs:
 
       - name: Package Windows Asset
         run: |
-          powershell -File packaging/windows/package_windows.ps1 -BuildDir build -OutputDir dist/windows -QtBinDir "$env:Qt6_DIR/bin"
+          powershell -File packaging/windows/package_windows.ps1 -BuildDir build -OutputDir dist/windows -QtBinDir "${{ env.QT_ROOT_DIR }}/bin"
           if (Test-Path "C:/vcpkg/installed/x64-windows/bin/sodium.dll") {
             Copy-Item "C:/vcpkg/installed/x64-windows/bin/sodium.dll" "dist/windows/"
           }
@@ -128,8 +128,10 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Build Tools
-        run: sudo apt-get update && sudo apt-get install -y ninja-build autoconf libtool
+      - name: Install Build Tools & Host Qt
+        run: |
+          sudo apt-get update && sudo apt-get install -y ninja-build autoconf libtool \
+            qt6-base-dev qt6-declarative-dev
 
       - name: Install Qt 6 Android
         uses: jurplel/install-qt-action@v4
@@ -151,10 +153,11 @@ jobs:
         run: |
           cmake -B build-android -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_TOOLCHAIN_FILE="${Qt6_DIR}/lib/cmake/Qt6/qt.toolchain.cmake" \
+            -DCMAKE_TOOLCHAIN_FILE="${{ env.QT_ROOT_DIR }}/lib/cmake/Qt6/qt.toolchain.cmake" \
+            -DQT_HOST_PATH="/usr/lib/qt6" \
             -DQT_ANDROID_ABIS="arm64-v8a" \
             -DANDROID_PLATFORM=android-26 \
-            -DCMAKE_PREFIX_PATH="${Qt6_DIR};${{ env.LIBSODIUM_DIR }}" \
+            -DCMAKE_PREFIX_PATH="${{ env.QT_ROOT_DIR }};${{ env.LIBSODIUM_DIR }}" \
             -DLIBSODIUM_INCLUDE_DIR="${{ env.LIBSODIUM_DIR }}/include" \
             -DLIBSODIUM_LIBRARY="${{ env.LIBSODIUM_DIR }}/lib/libsodium.a" \
             -DPEERCHAT_BUILD_TESTS=OFF \

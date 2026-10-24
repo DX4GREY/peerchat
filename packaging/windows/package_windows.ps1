@@ -8,8 +8,11 @@ Write-Host "==> Packaging PeerChat for Windows from $BuildDir..."
 
 New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
 
-Copy-Item "$BuildDir/apps/client/PeerChat.exe" "$OutputDir/"
-Copy-Item "$BuildDir/services/relay/peerchat-relay.exe" "$OutputDir/"
+$peerChatExe = if (Test-Path "$BuildDir/apps/client/PeerChat.exe") { "$BuildDir/apps/client/PeerChat.exe" } else { "$BuildDir/apps/client/Release/PeerChat.exe" }
+$relayExe = if (Test-Path "$BuildDir/services/relay/peerchat-relay.exe") { "$BuildDir/services/relay/peerchat-relay.exe" } else { "$BuildDir/services/relay/Release/peerchat-relay.exe" }
+
+if (Test-Path $peerChatExe) { Copy-Item $peerChatExe "$OutputDir/" }
+if (Test-Path $relayExe) { Copy-Item $relayExe "$OutputDir/" }
 
 if (Test-Path "$QtBinDir/windeployqt.exe") {
     Write-Host "==> Deploying Qt runtime DLLs..."
