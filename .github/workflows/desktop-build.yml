@@ -1,0 +1,48 @@
+name: Desktop Artifacts
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  package-desktop:
+    name: Package Desktop (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ ubuntu-24.04, windows-latest ]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Ninja
+        uses: ashutosh-varma/setup-ninja@v1.1
+
+      - name: Install Dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt update
+          sudo apt install -y cmake build-essential \
+            qt6-base-dev qt6-declarative-dev libsodium-dev libsqlite3-dev
+
+      - name: Build Linux Binaries
+        if: runner.os == 'Linux'
+        run: |
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DPEERCHAT_BUILD_TESTS=OFF
+          cmake --build build --config Release
+          mkdir -p dist/bin
+          cp build/apps/client/PeerChat dist/bin/
+          cp build/services/relay/peerchat-relay dist/bin/
+          tar -czvf peerchat-linux-x86_64.tar.gz -C dist/bin .
+
+      - name: Upload Linux Package
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: peerchat-linux-x86_64
+          path: peerchat-linux-x86_64.tar.gz

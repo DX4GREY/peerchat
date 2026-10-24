@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Build & Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-24.04, windows-latest ]
+        build_type: [ Release ]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Ninja
+        uses: ashutosh-varma/setup-ninja@v1.1
+        with:
+          version: 1.11.1
+
+      - name: Install Dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt update
+          sudo apt install -y cmake build-essential \
+            qt6-base-dev qt6-declarative-dev libsodium-dev libsqlite3-dev libgtest-dev
+
+      - name: Install Qt & Dependencies (Windows)
+        if: runner.os == 'Windows'
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: '6.6.2'
+          target: 'desktop'
+          arch: 'win64_msvc2022_64'
+
+      - name: Install libsodium (Windows vcpkg)
+        if: runner.os == 'Windows'
+        run: |
+          vcpkg install libsodium:x64-windows
+
+      - name: Configure CMake (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DPEERCHAT_BUILD_TESTS=ON \
+            -DPEERCHAT_BUILD_CLIENT=ON \
+            -DPEERCHAT_BUILD_RELAY=ON
+
+      - name: Configure CMake (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          cmake -B build -G Ninja `
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} `
+            -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" `
+            -DPEERCHAT_BUILD_TESTS=ON `
+            -DPEERCHAT_BUILD_CLIENT=ON `
+            -DPEERCHAT_BUILD_RELAY=ON
+
+      - name: Build All Targets
+        run: cmake --build build --config ${{ matrix.build_type }}
+
+      - name: Run Automated Tests
+        run: ctest --test-dir build --output-on-failure -C ${{ matrix.build_type }}
