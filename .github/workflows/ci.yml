@@ -89,15 +89,12 @@ jobs:
 
       - name: Configure CMake (Windows)
         if: runner.os == 'Windows'
-        shell: bash
         run: |
-          cmake -B build -G Ninja \
-            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-            -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" \
-            -DCMAKE_PREFIX_PATH="${{ env.QT_ROOT_DIR }};C:/vcpkg/installed/x64-windows" \
-            -DPEERCHAT_BUILD_TESTS=ON \
-            -DPEERCHAT_BUILD_CLIENT=ON \
-            -DPEERCHAT_BUILD_RELAY=ON
+          $toolchain = "$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
+          if (-not (Test-Path $toolchain)) { $toolchain = "C:/vcpkg/scripts/buildsystems/vcpkg.cmake" }
+          $vcpkgInstalled = "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows"
+          if (-not (Test-Path $vcpkgInstalled)) { $vcpkgInstalled = "C:/vcpkg/installed/x64-windows" }
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DCMAKE_TOOLCHAIN_FILE="$toolchain" -DCMAKE_PREFIX_PATH="$env:QT_ROOT_DIR;$vcpkgInstalled" -DPEERCHAT_BUILD_TESTS=ON -DPEERCHAT_BUILD_CLIENT=ON -DPEERCHAT_BUILD_RELAY=ON
 
       # Build and Test
       - name: Build All Targets
@@ -110,7 +107,9 @@ jobs:
       - name: Run Tests (Windows)
         if: runner.os == 'Windows'
         run: |
-          $env:PATH = "${{ env.QT_ROOT_DIR }}/bin;C:/vcpkg/installed/x64-windows/bin;$env:PATH"
+          $vcpkgBin = "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/bin"
+          if (-not (Test-Path $vcpkgBin)) { $vcpkgBin = "C:/vcpkg/installed/x64-windows/bin" }
+          $env:PATH = "$env:QT_ROOT_DIR/bin;$vcpkgBin;$env:PATH"
           ctest --test-dir build --output-on-failure -C ${{ matrix.build_type }}
 
       - name: Upload Test Logs on Failure

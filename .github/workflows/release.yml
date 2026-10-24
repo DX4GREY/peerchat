@@ -76,24 +76,23 @@ jobs:
           vcpkg install libsodium:x64-windows
 
       - name: Configure CMake
-        shell: bash
         run: |
-          cmake -B build -G Ninja \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" \
-            -DCMAKE_PREFIX_PATH="${{ env.QT_ROOT_DIR }};C:/vcpkg/installed/x64-windows" \
-            -DPEERCHAT_BUILD_TESTS=OFF \
-            -DPEERCHAT_BUILD_CLIENT=ON \
-            -DPEERCHAT_BUILD_RELAY=ON
+          $toolchain = "$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
+          if (-not (Test-Path $toolchain)) { $toolchain = "C:/vcpkg/scripts/buildsystems/vcpkg.cmake" }
+          $vcpkgInstalled = "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows"
+          if (-not (Test-Path $vcpkgInstalled)) { $vcpkgInstalled = "C:/vcpkg/installed/x64-windows" }
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE="$toolchain" -DCMAKE_PREFIX_PATH="$env:QT_ROOT_DIR;$vcpkgInstalled" -DPEERCHAT_BUILD_TESTS=OFF -DPEERCHAT_BUILD_CLIENT=ON -DPEERCHAT_BUILD_RELAY=ON
 
       - name: Build Release
         run: cmake --build build --config Release
 
       - name: Package Windows Asset
         run: |
-          powershell -File packaging/windows/package_windows.ps1 -BuildDir build -OutputDir dist/windows -QtBinDir "${{ env.QT_ROOT_DIR }}/bin"
-          if (Test-Path "C:/vcpkg/installed/x64-windows/bin/sodium.dll") {
-            Copy-Item "C:/vcpkg/installed/x64-windows/bin/sodium.dll" "dist/windows/"
+          $vcpkgBin = "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/bin"
+          if (-not (Test-Path $vcpkgBin)) { $vcpkgBin = "C:/vcpkg/installed/x64-windows/bin" }
+          powershell -File packaging/windows/package_windows.ps1 -BuildDir build -OutputDir dist/windows -QtBinDir "$env:QT_ROOT_DIR/bin"
+          if (Test-Path "$vcpkgBin/sodium.dll") {
+            Copy-Item "$vcpkgBin/sodium.dll" "dist/windows/" -Force
           }
           Compress-Archive -Path "dist/windows/*" -DestinationPath "PeerChat-${{ github.ref_name }}-win64.zip" -Force
           Get-FileHash -Algorithm SHA256 "PeerChat-${{ github.ref_name }}-win64.zip" | Out-File "PeerChat-${{ github.ref_name }}-win64.zip.sha256"
@@ -135,6 +134,7 @@ jobs:
             ninja-build autoconf libtool
 
       - name: Install Qt 6 Host (Desktop)
+        id: host_qt
         uses: jurplel/install-qt-action@v4
         with:
           version: '6.6.3'
@@ -145,6 +145,7 @@ jobs:
           setup-python: false
 
       - name: Install Qt 6 Target (Android)
+        id: target_qt
         uses: jurplel/install-qt-action@v4
         with:
           version: '6.6.3'
@@ -163,15 +164,27 @@ jobs:
 
       - name: Configure CMake for Android
         run: |
+          TARGET_QT="${{ steps.target_qt.outputs.qt-path }}"
+          if [ -z "$TARGET_QT" ] || [ ! -d "$TARGET_QT" ]; then
+            TARGET_QT=$(find "${{ runner.temp }}/qt-target" -name "qt.toolchain.cmake" -exec dirname {} \; | sed 's#/lib/cmake/Qt6##')
+          fi
+          HOST_QT="${{ steps.host_qt.outputs.qt-path }}"
+          if [ -z "$HOST_QT" ] || [ ! -d "$HOST_QT" ]; then
+            HOST_QT=$(find "${{ runner.temp }}/qt-host" -name "qmake" -exec dirname {} \; | sed 's#/bin##')
+          fi
+          echo "Target Qt: $TARGET_QT"
+          echo "Host Qt: $HOST_QT"
+          ls -la "$TARGET_QT/lib/cmake/Qt6/qt.toolchain.cmake"
+
           cmake -B build-android -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_TOOLCHAIN_FILE="${{ runner.temp }}/qt-target/Qt/6.6.3/android_arm64_v8a/lib/cmake/Qt6/qt.toolchain.cmake" \
-            -DQT_HOST_PATH="${{ runner.temp }}/qt-host/Qt/6.6.3/gcc_64" \
+            -DCMAKE_TOOLCHAIN_FILE="$TARGET_QT/lib/cmake/Qt6/qt.toolchain.cmake" \
+            -DQT_HOST_PATH="$HOST_QT" \
             -DANDROID_ABI="arm64-v8a" \
             -DANDROID_PLATFORM=android-26 \
             -DANDROID_SDK_ROOT="${ANDROID_HOME}" \
             -DANDROID_NDK_ROOT="${ANDROID_NDK_ROOT}" \
-            -DCMAKE_PREFIX_PATH="${{ runner.temp }}/qt-target/Qt/6.6.3/android_arm64_v8a;${{ env.LIBSODIUM_DIR }}" \
+            -DCMAKE_PREFIX_PATH="$TARGET_QT;${{ env.LIBSODIUM_DIR }}" \
             -DLIBSODIUM_INCLUDE_DIR="${{ env.LIBSODIUM_DIR }}/include" \
             -DLIBSODIUM_LIBRARY="${{ env.LIBSODIUM_DIR }}/lib/libsodium.a" \
             -DPEERCHAT_BUILD_TESTS=OFF \

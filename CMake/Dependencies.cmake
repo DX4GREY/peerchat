@@ -39,12 +39,16 @@ if(NOT libsodium_FOUND)
             HINTS
                 "${LIBSODIUM_DIR}/include"
                 ENV LIBSODIUM_DIR
+                "$ENV{VCPKG_INSTALLATION_ROOT}/installed/x64-windows/include"
+                "$ENV{VCPKG_ROOT}/installed/x64-windows/include"
                 "C:/vcpkg/installed/x64-windows/include"
         )
         find_library(LIBSODIUM_LIBRARY NAMES sodium libsodium
             HINTS
                 "${LIBSODIUM_DIR}/lib"
                 ENV LIBSODIUM_DIR
+                "$ENV{VCPKG_INSTALLATION_ROOT}/installed/x64-windows/lib"
+                "$ENV{VCPKG_ROOT}/installed/x64-windows/lib"
                 "C:/vcpkg/installed/x64-windows/lib"
         )
         if(LIBSODIUM_INCLUDE_DIR AND LIBSODIUM_LIBRARY)
