@@ -46,6 +46,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
       - name: Setup Ninja
         run: choco install ninja -y
 
@@ -57,9 +62,10 @@ jobs:
       - name: Install Qt 6
         uses: jurplel/install-qt-action@v4
         with:
-          version: '6.6.2'
+          version: '6.6.3'
           target: 'desktop'
-          arch: 'win64_msvc2022_64'
+          arch: 'win64_msvc2019_64'
+          setup-python: false
 
       - name: Install libsodium (vcpkg)
         run: |
@@ -81,7 +87,6 @@ jobs:
       - name: Package Windows Distribution
         run: |
           powershell -File packaging/windows/package_windows.ps1 -BuildDir build -OutputDir dist/windows -QtBinDir "$env:Qt6_DIR/bin"
-          # Also copy libsodium.dll to dist/windows
           if (Test-Path "C:/vcpkg/installed/x64-windows/bin/sodium.dll") {
             Copy-Item "C:/vcpkg/installed/x64-windows/bin/sodium.dll" "dist/windows/"
             Compress-Archive -Path "dist/windows/*" -DestinationPath "PeerChat-win64.zip" -Force

@@ -1,6 +1,8 @@
 # apps/client/CMakeLists.txt
 
-qt_policy(SET QTP0004 OLD)
+if(COMMAND qt_policy)
+    qt_policy(SET QTP0004 OLD)
+endif()
 
 qt_add_executable(PeerChat
     src/main.cpp

@@ -57,6 +57,12 @@ jobs:
             -DPEERCHAT_BUILD_RELAY=ON
 
       # Windows Setup
+      - name: Setup Python (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
       - name: Setup Ninja (Windows)
         if: runner.os == 'Windows'
         run: choco install ninja -y
@@ -71,9 +77,10 @@ jobs:
         if: runner.os == 'Windows'
         uses: jurplel/install-qt-action@v4
         with:
-          version: '6.6.2'
+          version: '6.6.3'
           target: 'desktop'
-          arch: 'win64_msvc2022_64'
+          arch: 'win64_msvc2019_64'
+          setup-python: false
 
       - name: Install libsodium (Windows vcpkg)
         if: runner.os == 'Windows'

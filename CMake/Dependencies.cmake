@@ -4,14 +4,14 @@ include(FetchContent)
 find_package(PkgConfig QUIET)
 
 # 1. Qt 6 Core & Network
-find_package(Qt6 6.5 REQUIRED COMPONENTS
+find_package(Qt6 REQUIRED COMPONENTS
     Core
     Network
     Sql
 )
 
 if(PEERCHAT_BUILD_CLIENT)
-    find_package(Qt6 6.5 REQUIRED COMPONENTS
+    find_package(Qt6 REQUIRED COMPONENTS
         Gui
         Qml
         Quick
