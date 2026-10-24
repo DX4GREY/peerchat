@@ -8,6 +8,9 @@ on:
 permissions:
   contents: read
 
+env:
+  DEBIAN_FRONTEND: noninteractive
+
 jobs:
   package-linux:
     name: Package Desktop (Linux x86_64)
@@ -18,9 +21,10 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          sudo apt update
-          sudo apt install -y cmake build-essential \
-            ninja-build qt6-base-dev qt6-declarative-dev libsodium-dev libsqlite3-dev
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake build-essential ninja-build \
+            qt6-base-dev qt6-declarative-dev libsodium-dev libsqlite3-dev
 
       - name: Build Linux Binaries
         run: |
@@ -72,13 +76,14 @@ jobs:
           vcpkg install libsodium:x64-windows
 
       - name: Configure CMake
+        shell: bash
         run: |
-          cmake -B build -G Ninja `
-            -DCMAKE_BUILD_TYPE=Release `
-            -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" `
-            "-DCMAKE_PREFIX_PATH=${{ env.QT_ROOT_DIR }};C:/vcpkg/installed/x64-windows" `
-            -DPEERCHAT_BUILD_TESTS=OFF `
-            -DPEERCHAT_BUILD_CLIENT=ON `
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" \
+            -DCMAKE_PREFIX_PATH="${{ env.QT_ROOT_DIR }};C:/vcpkg/installed/x64-windows" \
+            -DPEERCHAT_BUILD_TESTS=OFF \
+            -DPEERCHAT_BUILD_CLIENT=ON \
             -DPEERCHAT_BUILD_RELAY=ON
 
       - name: Build Release

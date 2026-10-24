@@ -89,13 +89,14 @@ jobs:
 
       - name: Configure CMake (Windows)
         if: runner.os == 'Windows'
+        shell: bash
         run: |
-          cmake -B build -G Ninja `
-            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} `
-            -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" `
-            "-DCMAKE_PREFIX_PATH=${{ env.QT_ROOT_DIR }};C:/vcpkg/installed/x64-windows" `
-            -DPEERCHAT_BUILD_TESTS=ON `
-            -DPEERCHAT_BUILD_CLIENT=ON `
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" \
+            -DCMAKE_PREFIX_PATH="${{ env.QT_ROOT_DIR }};C:/vcpkg/installed/x64-windows" \
+            -DPEERCHAT_BUILD_TESTS=ON \
+            -DPEERCHAT_BUILD_CLIENT=ON \
             -DPEERCHAT_BUILD_RELAY=ON
 
       # Build and Test

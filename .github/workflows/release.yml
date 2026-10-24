@@ -76,13 +76,14 @@ jobs:
           vcpkg install libsodium:x64-windows
 
       - name: Configure CMake
+        shell: bash
         run: |
-          cmake -B build -G Ninja `
-            -DCMAKE_BUILD_TYPE=Release `
-            -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" `
-            "-DCMAKE_PREFIX_PATH=${{ env.QT_ROOT_DIR }};C:/vcpkg/installed/x64-windows" `
-            -DPEERCHAT_BUILD_TESTS=OFF `
-            -DPEERCHAT_BUILD_CLIENT=ON `
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" \
+            -DCMAKE_PREFIX_PATH="${{ env.QT_ROOT_DIR }};C:/vcpkg/installed/x64-windows" \
+            -DPEERCHAT_BUILD_TESTS=OFF \
+            -DPEERCHAT_BUILD_CLIENT=ON \
             -DPEERCHAT_BUILD_RELAY=ON
 
       - name: Build Release
@@ -128,17 +129,28 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Build Tools & Host Qt
+      - name: Install Build Tools
         run: |
-          sudo apt-get update && sudo apt-get install -y ninja-build autoconf libtool \
-            qt6-base-dev qt6-declarative-dev
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends \
+            ninja-build autoconf libtool
 
-      - name: Install Qt 6 Android
+      - name: Install Qt 6 Host (Desktop)
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.6.3'
+          host: 'linux'
+          target: 'desktop'
+          arch: 'gcc_64'
+          dir: '${{ runner.temp }}/qt-host'
+          setup-python: false
+
+      - name: Install Qt 6 Target (Android)
         uses: jurplel/install-qt-action@v4
         with:
           version: '6.6.3'
           target: 'android'
           arch: 'android_arm64_v8a'
+          dir: '${{ runner.temp }}/qt-target'
           setup-python: false
 
       - name: Cross-Compile libsodium for Android ARM64
@@ -153,11 +165,13 @@ jobs:
         run: |
           cmake -B build-android -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_TOOLCHAIN_FILE="${{ env.QT_ROOT_DIR }}/lib/cmake/Qt6/qt.toolchain.cmake" \
-            -DQT_HOST_PATH="/usr/lib/qt6" \
-            -DQT_ANDROID_ABIS="arm64-v8a" \
+            -DCMAKE_TOOLCHAIN_FILE="${{ runner.temp }}/qt-target/Qt/6.6.3/android_arm64_v8a/lib/cmake/Qt6/qt.toolchain.cmake" \
+            -DQT_HOST_PATH="${{ runner.temp }}/qt-host/Qt/6.6.3/gcc_64" \
+            -DANDROID_ABI="arm64-v8a" \
             -DANDROID_PLATFORM=android-26 \
-            -DCMAKE_PREFIX_PATH="${{ env.QT_ROOT_DIR }};${{ env.LIBSODIUM_DIR }}" \
+            -DANDROID_SDK_ROOT="${ANDROID_HOME}" \
+            -DANDROID_NDK_ROOT="${ANDROID_NDK_ROOT}" \
+            -DCMAKE_PREFIX_PATH="${{ runner.temp }}/qt-target/Qt/6.6.3/android_arm64_v8a;${{ env.LIBSODIUM_DIR }}" \
             -DLIBSODIUM_INCLUDE_DIR="${{ env.LIBSODIUM_DIR }}/include" \
             -DLIBSODIUM_LIBRARY="${{ env.LIBSODIUM_DIR }}/lib/libsodium.a" \
             -DPEERCHAT_BUILD_TESTS=OFF \
@@ -165,7 +179,7 @@ jobs:
 
       - name: Build Android Targets
         run: |
-          cmake --build build-android
+          cmake --build build-android --target apk || cmake --build build-android
 
       - name: Package Android Artifact
         run: |
