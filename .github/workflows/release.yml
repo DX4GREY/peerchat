@@ -14,16 +14,13 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Ninja
-        uses: ashutosh-varma/setup-ninja@v1.1
+        uses: actions/checkout@v6
 
       - name: Install Dependencies
         run: |
           sudo apt update
           sudo apt install -y cmake build-essential \
-            qt6-base-dev qt6-declarative-dev libsodium-dev libsqlite3-dev
+            ninja-build qt6-base-dev qt6-declarative-dev libsodium-dev libsqlite3-dev
 
       - name: Build Release
         run: |

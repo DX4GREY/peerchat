@@ -21,23 +21,19 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Ninja
-        uses: ashutosh-varma/setup-ninja@v1.1
-        with:
-          version: 1.11.1
+        uses: actions/checkout@v6
 
       - name: Install Dependencies (Linux)
         if: runner.os == 'Linux'
         run: |
           sudo apt update
           sudo apt install -y cmake build-essential \
-            qt6-base-dev qt6-declarative-dev libsodium-dev libsqlite3-dev libgtest-dev
+            ninja-build qt6-base-dev qt6-declarative-dev libsodium-dev \
+            libsqlite3-dev libgtest-dev
 
       - name: Install Qt & Dependencies (Windows)
         if: runner.os == 'Windows'
-        uses: jurplel/install-qt-action@v3
+        uses: jurplel/install-qt-action@v4
         with:
           version: '6.6.2'
           target: 'desktop'
